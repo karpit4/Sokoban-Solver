@@ -5,11 +5,7 @@ import time
 import pyautogui
 from datetime import datetime
 
-#Эта версия пока наиболее эффективна, используется алгоритм A*, все функции далее также описаны,
-# возможна доработка или добавления эвристик, можно попробовать поиграть с коэффициентами при переменных в эвристике
-# Солвер решает все уровни miniban с сайта logic-games-spb, в среднем за ~30 сек. Также решает original Rabbit 1 с того же сайта,
-# но на это требуется уже около семи минут. На других уровнях не пробовал потому, что занимает слишком долго.#
-
+# 
 Colors = {128:"#",      #стена
           0:"",         #вне поля
           255:"_",      #пустая клетка
@@ -275,65 +271,35 @@ def solve(start_state):
     return None   
 
 
-def core(filename: str):
-    '''Функция, собирающая всё воедино: принимает значение файла - возвращает следующий словарь:
-    Если решение есть:
-    answer["status"] = 1 
-    answer["duration"] - сколько секунд программа искала решение
-    answer["start_state"] - то, как поле было прочитано со скрина
-    
-    Если решения нет:
-    answer["status"] = 0 '''
-    
-    answer = {}
-    answer["status"] = 0
-
-    start_time = datetime.now()
-    
-    level = parse(file_name)
-    start_state = matrix_to_states(level)
-    salvation = solve(start_state)
-    if salvation is not None:
-        end_time = datetime.now()
-        diff = end_time - start_time 
-        
-        answer["verdict"] = 1
-        answer["duration"] = int(diff.seconds)
-        answer["start_state"] = start_state
-    return answer
         
 
 
 print("Введите название файла")
-
-file_name = input()
-verdict = core(file_name)
-
-if not verdict["status"]:
-    print("no salvation")
     
-# files = [input()]
-# start_time = datetime.now()
-# for file_name in files:
-#     level = parse(file_name)
-#     Start_state = matrix_to_states(level)
-#     reshenie = solve(Start_state)
-#     if reshenie is not None:
+
+files = input().split()
+start_time = datetime.now()
+for file_name in files:
+    level = parse(file_name)
+    Start_state = matrix_to_states(level)
+    reshenie = solve(Start_state)
+    if reshenie is not None:
         
-#         end_time = datetime.now()
-#         diff = end_time - start_time
+        end_time = datetime.now()
+        diff = end_time - start_time
+        print("=====================================================================================")
+        print(f"Уровень: {file_name}")
+        print(f"Решение найдено. Ходов: {len(reshenie)}")
+        print(f"Затрачено {diff.seconds // (60*60)} часов {(diff.seconds//60)%60} минут и {diff.seconds%60} секунд")
+        print("Введите что-нибудь, чтобы применить решение")
+        input()
+        print("Через 5 секунд программа запустится и произведет последовательность команд")
+        for i in range(5):
+            time.sleep(1)
+            print(5-i)
         
-#         print(f"Решение найдено. Ходов: {len(reshenie)}")
-#         print(f"Затрачено {diff.seconds // (60*60)} часов {(diff.seconds//60)%60} минут и {diff.seconds%60} секунд")
-#         print("Введите что-нибудь, чтобы применить решение")
-#         input()
-#         print("Через 5 секунд программа запустится и произведет последовательность команд")
-#         for i in range(5):
-#             time.sleep(1)
-#             print(5-i)
+        print(reshenie)
+        pyautogui.press(reshenie)
         
-#         print(reshenie)
-#         pyautogui.press(reshenie)
-        
-#     else:
-#         print("Решений не найдено")
+    else:
+        print("Решений не найдено")
