@@ -7,9 +7,8 @@ def main():
     
     levels_info = choose_parsing()
 
-    start_time = datetime.now()
-
     for name,level in levels_info:
+        start_time = datetime.now()
         reshenie = solve(level)
         if reshenie is not None:
             
