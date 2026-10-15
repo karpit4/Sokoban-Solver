@@ -10,7 +10,49 @@ Colors = {128:"#",      #стена
           219: "X",     #конечная клетка
           193: "G"}     #коробка на конечной клетке
 
+VALID_CHARS = set("#_BPXG")
 
+def parse_from_input():
+    '''Читает уровень построчно из консоли, заканчивается на 0.
+    Возвращает матрицу с условными обозначениями, как parse(name)'''
+    field = []
+    while True:
+        line = input().strip()
+        if line == "0":
+            break
+        if not line:
+            continue  # пропускаем пустые строки
+        if not set(line) <= VALID_CHARS:
+            print("Недопустимые символы, введите строку заново")
+            continue
+        field.append(list(line))  # строка -> список символов
+
+    # выравниваем строки по длине (как в parse, где поле прямоугольное)
+    if field:
+        width = max(len(row) for row in field)
+        for row in field:
+            row.extend(['#'] * (width - len(row)))
+    return field
+
+def choose_parsing():
+    print("Выберите способ ввести уровень")
+    print("\n 1 - Ввести имена файлов через пробел \n 2 - Ввести уровень построчно")
+
+    mode = int(input())
+    if mode == 1:
+        levels = []
+        files = input().split()
+        for file_name in files:
+            level = parse(file_name)
+            levels.append((file_name, level))
+        return levels
+
+    if mode == 2:
+        print("==================Условные обозначения==================")
+        print("\n# - стена \n_ - пустая клетка \nB - коробка \nP - игрок \nX - конечная клетка \nG - коробка на конечной клетке ")
+        print("Введите уровень построчно, закончите, введя 0")
+        return [("manual level", parse_from_input())]
+    
 def parse(name):
     '''Принимает имя файла с картинкой, возвращает матрицу с условными обозначениями
     как в Colors'''
