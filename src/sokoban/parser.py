@@ -2,6 +2,7 @@ from state import State
 from PIL import Image
 import numpy as np
 
+VALID_CHARS = set("#_BPXG")
 Colors = {128:"#",      #стена
           0:"",         #вне поля
           255:"_",      #пустая клетка
@@ -10,7 +11,37 @@ Colors = {128:"#",      #стена
           219: "X",     #конечная клетка
           193: "G"}     #коробка на конечной клетке
 
-VALID_CHARS = set("#_BPXG")
+def normalize(field):
+    '''Выравнивает строки по длине, добивая короткие стенами'''
+    if field:
+        width = max(len(row) for row in field)
+        for row in field:
+            row.extend(['#'] * (width - len(row)))
+    return field
+
+def parse_txt(name):
+    '''Принимает имя .txt файла, где уровни заданы построчно и разделены
+    пустой строкой. Возвращает список уровней, каждый уровень - матрица
+    с условными обозначениями, как в parse(name)'''
+    levels = []
+    field = []
+    with open(name, encoding="utf-8-sig") as f:
+        for line_number, line in enumerate(f, start=1):
+            line = line.strip()
+            if not line:
+                # пустая строка закрывает текущий уровень
+                if field:
+                    levels.append(normalize(field))
+                    field = []
+                continue
+            if not set(line) <= VALID_CHARS:
+                raise ValueError(
+                    f"{name}, строка {line_number}: недопустимые символы в '{line}'"
+                )
+            field.append(list(line))
+    if field:  # последний уровень, если файл не заканчивается пустой строкой
+        levels.append(normalize(field))
+    return levels
 
 def parse_from_input():
     '''Читает уровень построчно из консоли, заканчивается на 0.
@@ -35,8 +66,8 @@ def parse_from_input():
     return field
 
 def choose_parsing():
-    print("Выберите способ ввести уровень")
-    print("\n 1 - Ввести имена файлов через пробел \n 2 - Ввести уровень построчно")
+    print("Выберите способ считать уровень")
+    print("\n 1 - Считать имена файлов (png,jpg) через пробел \n 2 - Считать уровень построчно \n 3 - Считать уровни построчно из .txt")
 
     mode = int(input())
     if mode == 1:
@@ -49,9 +80,26 @@ def choose_parsing():
 
     if mode == 2:
         print("==================Условные обозначения==================")
-        print("\n# - стена \n_ - пустая клетка \nB - коробка \nP - игрок \nX - конечная клетка \nG - коробка на конечной клетке ")
+        print("\n# - стена \n_ - пустая клетка \nB - коробка \nP - игрок \nX - конечная клетка \nG - коробка на конечной клетке \n")
         print("Введите уровень построчно, закончите, введя 0")
         return [("manual level", parse_from_input())]
+    
+    if mode == 3:
+        print("==================Условные обозначения==================")
+        print("\n# - стена \n_ - пустая клетка \nB - коробка \nP - игрок \nX - конечная клетка \nG - коробка на конечной клетке \n")
+        print("==================Формат файла==================")
+        print("\nТекстовый файл (.txt), уровень записан построчно символами выше.")
+        print("Разные уровни разделяются пустой строкой")
+        print("Введите имена .txt файлов через пробел")
+        levels = []
+        for file_name in input().split():
+            parsed = parse_txt(file_name)
+            for i, level in enumerate(parsed, start=1):
+                if len(parsed) == 1:
+                    levels.append((file_name, level))
+                else:
+                    levels.append((f"{file_name} #{i}", level))
+        return levels
     
 def parse(name):
     '''Принимает имя файла с картинкой, возвращает матрицу с условными обозначениями
