@@ -72,25 +72,3 @@ def parse(name):
         i+=1
     return field 
 
-def matrix_to_states(matrix):
-    """Подаем сюда матрицу, полученную при помощи функции parse. На выходе получаем переменную типа State, соответствующую данной матрице
-        Можно также вручную нарисовать поле при помощи списка списков, но строго соблюдая обозначения из Colors."""
-    level = matrix
-    walls,boxes,goals = [],[],[]
-    player = 0
-
-    for i in range(len(level)): #заполняем walls,boxes,goals, player для инициализации State
-        for j in range(len(level[0])):
-            if level[i][j] == "#":
-                walls.append((i,j))
-            elif level[i][j] == "B":
-                boxes.append((i,j))
-            elif level[i][j] == "P":
-                player = (i,j)
-            elif level[i][j] == "X":
-                goals.append((i,j))
-            elif level[i][j] == "G":
-                goals.append((i,j))
-                boxes.append((i,j))
-    Ans = State(player,walls,boxes,goals)
-    return Ans

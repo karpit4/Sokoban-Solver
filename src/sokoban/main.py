@@ -1,5 +1,4 @@
 from datetime import datetime
-from parser import matrix_to_states
 from parser import choose_parsing
 from solver import solve 
 from runner import execute_solution
@@ -11,8 +10,7 @@ def main():
     start_time = datetime.now()
 
     for name,level in levels_info:
-        Start_state = matrix_to_states(level)
-        reshenie = solve(Start_state)
+        reshenie = solve(level)
         if reshenie is not None:
             
             end_time = datetime.now()
