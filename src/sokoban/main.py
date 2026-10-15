@@ -20,9 +20,14 @@ def main():
             print(f"Уровень: {name}")
             print(f"Решение найдено. Ходов: {len(reshenie)}")
             print(f"Затрачено {diff.seconds // (60*60)} часов {(diff.seconds//60)%60} минут и {diff.seconds%60} секунд")
-            execute_solution(reshenie)
+            print(f"Чтобы применить решение введите 1. Иначе введите 0")
+            execution = int(input())
+            if execution==1:
+                execute_solution(reshenie)
             
         else:
+            print("=====================================================================================")
+            print(f"Уровень: {name}")
             print("Решений не найдено")
         
 if __name__ == "__main__":
