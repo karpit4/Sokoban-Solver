@@ -23,6 +23,10 @@ def matrix_to_states(matrix):
             elif level[i][j] == "G":
                 goals.append((i,j))
                 boxes.append((i,j))
+            elif level[i][j] == "Q":
+                player = (i,j)
+                goals.append((i,j))
+                
     Ans = State(player,walls,boxes,goals)
     return Ans
 
