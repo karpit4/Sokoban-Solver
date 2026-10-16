@@ -257,9 +257,9 @@ class EditorWindow:
         self._push_undo(self.board.get_matrix())
 
         if side == "top":
-            m.insert(0, [""] * cols) if delta > 0 else m.pop(0)
+            m.insert(0, ["_"] * cols) if delta > 0 else m.pop(0)
         elif side == "bottom":
-            m.append([""] * cols) if delta > 0 else m.pop()
+            m.append(["_"] * cols) if delta > 0 else m.pop()
         elif side == "left":
             for row in m:
                 row.insert(0, "_") if delta > 0 else row.pop(0)

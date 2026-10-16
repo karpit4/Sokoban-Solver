@@ -35,16 +35,26 @@ def choose_theme(current):
 
 def main():
     state = {"theme": "default"}
-    
-    levels_info = choose_parsing(
-        theme_change=lambda: state.update(theme=choose_theme(state["theme"])))
+    cache = {}                      # название темы -> объект Theme
 
-    get_root()                      # корень должен существовать до создания Theme
-    theme = Theme()                 # одна тема на оба окна
-    
+    def make_theme():
+        """Тема, выбранная сейчас. Один объект на название, чтобы окна делили кэш."""
+        name = state["theme"]
+        if name not in cache:
+            get_root()              # корень должен существовать до создания Theme
+            cache[name] = Theme(os.path.join(TEXTURES_DIR, name))
+        return cache[name]
+
+    levels_info = choose_parsing(
+        theme_change=lambda: state.update(theme=choose_theme(state["theme"])),
+        make_theme=make_theme)
+
+    theme = make_theme()
     levels_info = confirm_levels(levels_info, theme=theme,
                                  edit_callback=lambda m, p: edit_level(m, p, theme))
-
+    if not levels_info:
+        print("Нет подтверждённых уровней")
+        return
 
     for name,level in levels_info:
         start_time = datetime.now()

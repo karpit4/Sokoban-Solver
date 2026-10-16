@@ -25,7 +25,6 @@ SYMBOL_TO_NAME = {
     "G": "box_on_goal",
     "P": "player",
     "Q": "player_on_goal",
-    "":  "outside",
     "?": "unknown",
 }
 

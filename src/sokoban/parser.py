@@ -66,7 +66,7 @@ def parse_from_input():
             row.extend(['#'] * (width - len(row)))
     return field
 
-def choose_parsing(theme_change = None ) -> list[tuple[str, list]]:
+def choose_parsing(theme_change = None, make_theme = None ) -> list[tuple[str, list]]:
     print("====================================================================================")
     print("Выберите способ считать уровень")
     print("\n 1 - Считать имена файлов (png,jpg) через пробел \n 2 - Считать уровень построчно \n 3 - Считать уровни построчно из .txt \n 4 - Считать уровень из конструктора ")
@@ -109,7 +109,7 @@ def choose_parsing(theme_change = None ) -> list[tuple[str, list]]:
             from gui.editor_window import edit_level
             levels = []
             while True:
-                level = edit_level()
+                level = edit_level(theme=make_theme() if make_theme else None)
                 if level is not None:
                     levels.append((f"constructor #{len(levels) + 1}", level))
                 print("Создать ещё один уровень? 1 - да, 0 - нет")
@@ -118,7 +118,7 @@ def choose_parsing(theme_change = None ) -> list[tuple[str, list]]:
             return levels
         if mode == "5" and theme_change:
             theme_change()
-            return choose_parsing(theme_change)
+            return choose_parsing(theme_change, make_theme)
         
         print("Некорректный ввод")
     
