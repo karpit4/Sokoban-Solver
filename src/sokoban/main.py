@@ -45,13 +45,28 @@ def main():
             cache[name] = Theme(os.path.join(TEXTURES_DIR, name))
         return cache[name]
 
+    def next_theme():
+        """Переключает выбранную тему на следующую по кругу и возвращает её."""
+        themes = list_themes()
+        if themes:
+            current = state["theme"]
+            i = themes.index(current) if current in themes else -1
+            state["theme"] = themes[(i + 1) % len(themes)]
+        return make_theme()
+
     levels_info = choose_parsing(
         theme_change=lambda: state.update(theme=choose_theme(state["theme"])),
         make_theme=make_theme)
 
-    theme = make_theme()
-    levels_info = confirm_levels(levels_info, theme=theme,
-                                 edit_callback=lambda m, p: edit_level(m, p, theme))
+    levels_info = confirm_levels(
+        levels_info, theme=make_theme(),
+        edit_callback=lambda m, p: edit_level(m, p, make_theme()),
+        next_theme=next_theme)
+
+    # theme = make_theme()
+    # levels_info = confirm_levels(levels_info, theme=theme,
+    #                              edit_callback=lambda m, p: edit_level(m, p, theme))
+
     if not levels_info:
         print("Нет подтверждённых уровней")
         return

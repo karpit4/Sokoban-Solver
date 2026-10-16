@@ -58,6 +58,16 @@ class BoardView(tk.Frame):
                 img = self.canvas.create_image(x, y, anchor="nw")
                 self._cell_ids[(i, j)] = (rect, img)
                 self._apply(i, j, self.matrix[i][j])
+ 
+    def set_theme(self, theme):
+        """Подставляет другую тему и перерисовывает поле.
+        Подсветку ошибок после этого нужно нарисовать заново (highlight)."""
+        self.theme = theme
+        self.configure(bg=theme.ui["window_bg"])
+        self.canvas.configure(bg=theme.ui["window_bg"])
+        if self.matrix:
+            self.set_matrix(self.matrix)
+
 
     # ---------- изменение одной клетки ----------
 
