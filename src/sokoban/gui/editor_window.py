@@ -276,8 +276,8 @@ class EditorWindow:
         trimmed = trim(self.board.matrix)
         final = f"{len(trimmed)}×{len(trimmed[0])}" if trimmed else "пусто"
         self.size_label.config(
-            text=f"Сетка: {self.board.rows}×{self.board.cols}   "
-                 f"Уровень после обрезки пустых краёв: {final}")
+            text=f"Размер сетки: {self.board.rows}×{self.board.cols}   "
+                 f"Размер уровня: {final}")
 
         ui = self.theme.ui
         issues = validate(self.board.matrix)
