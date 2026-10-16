@@ -5,6 +5,16 @@ from PIL import Image, ImageTk
 # папка sokoban (на уровень выше gui)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEFAULT_THEME_DIR = os.path.join(BASE_DIR, "textures", "default")
+TEXTURES_DIR = os.path.join(BASE_DIR, "textures")
+
+def list_themes():
+    """Названия папок внутри textures (каждая папка это тема)."""
+    if not os.path.isdir(TEXTURES_DIR):
+        return []
+    return sorted(name for name in os.listdir(TEXTURES_DIR)
+                  if os.path.isdir(os.path.join(TEXTURES_DIR, name))
+                  and not name.startswith((".", "__")))
+
 
 # символ матрицы -> имя текстуры
 SYMBOL_TO_NAME = {
