@@ -66,11 +66,12 @@ def parse_from_input():
             row.extend(['#'] * (width - len(row)))
     return field
 
-def choose_parsing() -> list[tuple[str, list]]:
+def choose_parsing(theme_change = None ) -> list[tuple[str, list]]:
     print("====================================================================================")
     print("Выберите способ считать уровень")
-    print("\n 1 - Считать имена файлов (png,jpg) через пробел \n 2 - Считать уровень построчно \n 3 - Считать уровни построчно из .txt \n 4 - Считать уровень из конструктора")
-
+    print("\n 1 - Считать имена файлов (png,jpg) через пробел \n 2 - Считать уровень построчно \n 3 - Считать уровни построчно из .txt \n 4 - Считать уровень из конструктора ")
+    if theme_change:
+        print(" 5 - Сменить тему оформления \n")
     while True:
         mode = input()
         if mode == "1":
@@ -115,6 +116,9 @@ def choose_parsing() -> list[tuple[str, list]]:
                 if input().strip() != "1":
                     break
             return levels
+        if mode == "5" and theme_change:
+            theme_change()
+            return choose_parsing(theme_change)
         
         print("Некорректный ввод")
     

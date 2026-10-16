@@ -1,19 +1,47 @@
+import os
 from datetime import datetime
 from parser import choose_parsing
-from solver import solve 
+from solver import solve
 from runner import execute_solution
 from gui.confirm_window import confirm_levels
 from gui.editor_window import edit_level
-from gui.theme import Theme
+from gui.theme import Theme, TEXTURES_DIR, list_themes
 from gui.app import get_root
 
+def choose_theme(current):
+    """Показывает список тем и возвращает название выбранной (или текущей)."""
+    themes = list_themes()
+    if not themes:
+        print("В папке textures нет тем")
+        return current
+    print("Доступные темы:")
+    for i, name in enumerate(themes, start=1):
+        mark = " (текущая)" if name == current else ""
+        print(f" {i} - {name}{mark}")
+    print("Введите номер или название темы (пустая строка - оставить текущую)")
+    while True:
+        answer = input().strip()
+        if not answer:
+            return current
+        if answer.isdigit() and 1 <= int(answer) <= len(themes):
+            chosen = themes[int(answer) - 1]
+        elif answer in themes:
+            chosen = answer
+        else:
+            print("Такой темы нет, попробуйте ещё раз")
+            continue
+        print(f"Выбрана тема: {chosen}")
+        return chosen
 
 def main():
+    state = {"theme": "default"}
     
-    levels_info = choose_parsing()
+    levels_info = choose_parsing(
+        theme_change=lambda: state.update(theme=choose_theme(state["theme"])))
 
     get_root()                      # корень должен существовать до создания Theme
     theme = Theme()                 # одна тема на оба окна
+    
     levels_info = confirm_levels(levels_info, theme=theme,
                                  edit_callback=lambda m, p: edit_level(m, p, theme))
 
