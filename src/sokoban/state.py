@@ -25,41 +25,19 @@ class State:
         return self.boxes == self.goals
 
 def state_to_matrix(state: State):
-    '''Принимает State и делает из него матрицу с условными обозначениями как в Colors. '''
-    xs = [x[0] for x in state.walls]
-    ys = [x[1] for x in state.walls]
-    x_size = max(xs)
-    y_size = max(ys)
-    Matrix = [0]*(x_size+1)
-    for row in range(len(Matrix)):
-        Matrix[row] = [0] * (y_size+1)
-    
-    Matrix[state.player_pos[0]][state.player_pos[1]] = 'P'
-    for x,y in state.walls:
-        Matrix[x][y] = '#'
-    
-    for x,y in state.goals:
-        Matrix[x][y] = 'X'
-    
-    for x,y in state.boxes:
-        if Matrix[x][y] == 'X':
-            Matrix[x][y] = 'G'
-        else:
-            Matrix[x][y] = 'B'
-    
-    for x in range(len(Matrix)):
-        for y in range(len(Matrix[0])-1,-1,-1):
-            if Matrix[x][y] == 0:
-                if y == len(Matrix[0])-1:
-                    Matrix[x][y] = ''
-                elif Matrix[x][y+1] == '':
-                    Matrix[x][y] = ''
-                else:
-                    Matrix[x][y] = '_'
-        j = 0
-        while Matrix[x][j] != '#':
-            Matrix[x][j] = ''
-            j += 1
+    '''Принимает State и делает из него матрицу с обозначениями как в Colors.'''
+    rows = max(x for x, _ in state.walls) + 1
+    cols = max(y for _, y in state.walls) + 1
+    Matrix = [["_"] * cols for _ in range(rows)]
+
+    for x, y in state.goals:
+        Matrix[x][y] = "X"
+    for x, y in state.walls:
+        Matrix[x][y] = "#"
+    for x, y in state.boxes:
+        Matrix[x][y] = "G" if (x, y) in state.goals else "B"
+    px, py = state.player_pos
+    Matrix[px][py] = "Q" if (px, py) in state.goals else "P"
     return Matrix
 
 
