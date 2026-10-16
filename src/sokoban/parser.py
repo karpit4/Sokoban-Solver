@@ -67,12 +67,13 @@ def parse_from_input():
     return field
 
 def choose_parsing() -> list[tuple[str, list]]:
+    print("====================================================================================")
     print("Выберите способ считать уровень")
-    print("\n 1 - Считать имена файлов (png,jpg) через пробел \n 2 - Считать уровень построчно \n 3 - Считать уровни построчно из .txt")
+    print("\n 1 - Считать имена файлов (png,jpg) через пробел \n 2 - Считать уровень построчно \n 3 - Считать уровни построчно из .txt \n 4 - Считать уровень из конструктора")
 
     while True:
-        mode = int(input())
-        if mode == 1:
+        mode = input()
+        if mode == "1":
             levels = []
             files = input().split()
             for file_name in files:
@@ -80,13 +81,13 @@ def choose_parsing() -> list[tuple[str, list]]:
                 levels.append((file_name, level))
             return levels
 
-        if mode == 2:
+        if mode == "2":
             print("================================Условные обозначения================================")
             print("\n# - стена \n_ - пустая клетка \nB - коробка \nP - игрок \nX - конечная клетка \nG - коробка на конечной клетке \nQ - игрок на конечной клетке \n")
             print("Введите уровень построчно, закончите, введя 0")
             return [("manual level", parse_from_input())]
         
-        if mode == 3:
+        if mode == "3":
             print("================================Условные обозначения================================")
             print("\n# - стена \n_ - пустая клетка \nB - коробка \nP - игрок \nX - конечная клетка \nG - коробка на конечной клетке \nQ - игрок на конечной клетке \n")
             print("====================================Формат файла====================================")
@@ -102,7 +103,20 @@ def choose_parsing() -> list[tuple[str, list]]:
                     else:
                         levels.append((f"{file_name} #{i}", level))
             return levels
-        print("Неккоректный ввод")
+        
+        if mode == "4":
+            from gui.editor_window import edit_level
+            levels = []
+            while True:
+                level = edit_level()
+                if level is not None:
+                    levels.append((f"constructor #{len(levels) + 1}", level))
+                print("Создать ещё один уровень? 1 - да, 0 - нет")
+                if input().strip() != "1":
+                    break
+            return levels
+        
+        print("Некорректный ввод")
     
 def parse(name):
     '''Принимает имя файла с картинкой, возвращает матрицу с условными обозначениями
@@ -117,7 +131,7 @@ def parse(name):
     i,j= 0 ,0
     for strok in range(14,(H),30):
         for stolb in range(14,W,30):
-            field[i][j] = (Colors[matrix[strok][stolb]])
+            field[i][j] = Colors.get(int(matrix[strok][stolb]), "?")
             j+=1
         j=0
         i+=1
