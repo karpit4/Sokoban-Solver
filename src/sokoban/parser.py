@@ -78,7 +78,11 @@ def choose_parsing(theme_change = None, make_theme = None ) -> list[tuple[str, l
             levels = []
             files = input().split()
             for file_name in files:
-                level = parse(file_name)
+                try:
+                    level = parse(file_name)
+                except:
+                    print(f'Файл "{file_name}" не найден')
+                    continue
                 levels.append((file_name, level))
             return levels
 

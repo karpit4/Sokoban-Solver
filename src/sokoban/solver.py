@@ -44,7 +44,6 @@ def solve(level):
     start_h = heuristic(start_state)
     start_f = start_g + start_h
     visited = set()
-    cnt = 0
     
     proc = (start_f, start_g, start_state, [])
     
