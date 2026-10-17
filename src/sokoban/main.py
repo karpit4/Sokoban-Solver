@@ -1,5 +1,5 @@
 from datetime import datetime
-from console import choose_library_level, choose_parsing, choose_play_mode
+from console import choose_library_level, choose_parsing, choose_play_mode, choose_solution_action
 from core.solver import solve
 from levels import library
 from levels.validation import validate
@@ -21,8 +21,7 @@ def choose_action():
             return answer
         print("Некорректный ввод")
 
-
-def solve_levels(levels_info):
+def solve_levels(levels_info, themes):
     for name, level in levels_info:
         start_time = datetime.now()
         reshenie = solve(level)
@@ -35,16 +34,16 @@ def solve_levels(levels_info):
             print(f"Уровень: {name}")
             print(f"Решение найдено. Ходов: {len(reshenie)}")
             print(f"Затрачено {diff.seconds // (60*60)} часов {(diff.seconds//60)%60} минут и {diff.seconds%60} секунд")
-            print(f"Чтобы применить решение введите 1. Иначе введите 0")
-            execution = input()
-            if execution == "1":
+            action = choose_solution_action()
+            if action == "1":
                 execute_solution(reshenie)
+            elif action == "2":
+                play_level(level, f"{name}: решение солвера", themes=themes, solution=reshenie)
 
         else:
             print("=====================================================================================")
             print(f"Уровень: {name}")
             print("Решений не найдено")
-
 
 def play_levels(levels_info, themes):
     for n, (name, level) in enumerate(levels_info):
@@ -119,7 +118,7 @@ def main():
     if not levels_info:
         print("Нет подтверждённых уровней")
         return
-    solve_levels(levels_info)
+    solve_levels(levels_info, themes)
 
 
 if __name__ == "__main__":

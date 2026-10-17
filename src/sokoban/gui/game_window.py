@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox
 
+from core.playback import SolutionPlayback
 from core.rules import DIRECTIONS
 from core.session import GameSession
 from core.state import symbol_at
@@ -15,19 +16,33 @@ WASD_KEYCODES = {87: "Up", 65: "Left", 83: "Down", 68: "Right"}   # W, A, S, D
 UNDO_KEYCODE = 90      # Z
 RESTART_KEYCODE = 82   # R
 
+SPEEDS = [500, 250, 120, 60, 25]   # пауза между ходами при показе решения, мс
+DEFAULT_SPEED = 2                  # индекс в SPEEDS
+START_DELAY = 500                  # пауза перед первым ходом показа, мс
+
+HINT = "Стрелки/WASD: ход    Клик: перейти    Z: отмена    R: заново"
+PLAYING_HINT = "Идёт показ решения: ходы выполняются автоматически"
+
 
 class GameFrame(tk.Frame):
     """Окно игры в виде Frame: его можно поместить и в отдельное окно (play_level),
     и позже в главное окно программы.
     on_exit(won, moves) вызывается, когда игрок нажал «Выйти»:
-    won - пройден ли уровень, moves - сделанные ходы."""
+    won - пройден ли уровень, moves - сделанные ходы.
+    solution: список ходов солвера. Если он задан, решение проигрывается автоматически
+    (ходы применяются напрямую, фокус окна для этого не нужен)."""
 
-    def __init__(self, master, matrix, name, themes, on_exit):
+    def __init__(self, master, matrix, name, themes, on_exit, solution=None):
         super().__init__(master, padx=12, pady=12)
         self.themes = themes
         self.theme = themes.theme
         self.on_exit = on_exit
         self.session = GameSession(matrix)
+        self.playback = SolutionPlayback(self.session, solution) if solution else None
+        self._playing = self.playback is not None
+        self._paused = False
+        self._timer = None             # id отложенного шага показа
+        self._speed = DEFAULT_SPEED
         self.styler = Styler()
         self.styler.add(self, "bg")
 
@@ -39,8 +54,11 @@ class GameFrame(tk.Frame):
 
         self.status_label = self._label(self, font=("Segoe UI", 11, "bold"))
         self.status_label.pack(pady=(8, 0))
-        self._label(self, text="Стрелки/WASD: ход    Клик: перейти    Z: отмена    R: заново",
-                    font=("Segoe UI", 9)).pack(pady=(2, 8))
+        self.hint_label = self._label(self, font=("Segoe UI", 9))
+        self.hint_label.pack(pady=(2, 8))
+
+        if self._playing:
+            self._build_playback_row()
 
         buttons = self._frame(self)
         buttons.pack()
@@ -69,8 +87,12 @@ class GameFrame(tk.Frame):
 
         # Клавиши ловит сам Frame, поэтому после каждого нажатия кнопки фокус возвращается ему
         self.bind("<Key>", self._on_key)
+        self.bind("<Destroy>", self._on_destroy)
         self.board.canvas.bind("<Button-1>", self._on_click)
         self._update_status()
+
+        if self._playing:
+            self._schedule(START_DELAY)
 
     # ---------- оформление ----------
 
@@ -101,6 +123,70 @@ class GameFrame(tk.Frame):
         self.board.set_theme(theme)  # перерисовывает текущее положение, а не начальное
         self._update_status()
 
+    # ---------- показ решения ----------
+
+    def _build_playback_row(self):
+        self.playback_row = self._frame(self)
+        self.playback_row.pack(pady=(0, 8))
+        self.pause_btn = self._button(self.playback_row, "Пауза", self._toggle_pause, width=12)
+        self.take_btn = self._button(self.playback_row, "Взять управление", self._end_playback, width=16)
+        self.slower_btn = self._button(self.playback_row, "−", lambda: self._change_speed(-1), width=3)
+        self.speed_label = self._label(self.playback_row, width=14)
+        self.faster_btn = self._button(self.playback_row, "+", lambda: self._change_speed(1), width=3)
+        for widget in (self.pause_btn, self.take_btn, self.slower_btn,
+                       self.speed_label, self.faster_btn):
+            widget.pack(side="left", padx=3)
+        self._update_speed_label()
+
+    def _update_speed_label(self):
+        self.speed_label.config(text=f"Скорость: {self._speed + 1}/{len(SPEEDS)}")
+
+    def _change_speed(self, step):
+        self._speed = min(max(self._speed + step, 0), len(SPEEDS) - 1)
+        self._update_speed_label()     # новая скорость действует со следующего хода
+
+    def _schedule(self, delay):
+        self._cancel_timer()
+        self._timer = self.after(delay, self._play_step)
+
+    def _cancel_timer(self):
+        if self._timer is not None:
+            self.after_cancel(self._timer)
+            self._timer = None
+
+    def _play_step(self):
+        self._timer = None
+        if not self._playing or self._paused:
+            return
+        self._apply(self.playback.step())
+        if self.playback.finished:
+            self._end_playback()
+        else:
+            self._schedule(SPEEDS[self._speed])
+
+    def _toggle_pause(self):
+        if self._paused:
+            self._paused = False
+            self.pause_btn.config(text="Пауза")
+            self._schedule(SPEEDS[self._speed])
+        else:
+            self._paused = True
+            self._cancel_timer()
+            self.pause_btn.config(text="Продолжить")
+
+    def _end_playback(self):
+        """Показ закончился или игрок взял управление: дальше обычная игра с текущего места."""
+        self._cancel_timer()
+        self._playing = False
+        self._paused = False
+        self.playback_row.pack_forget()
+        self._update_status()
+
+    def _on_destroy(self, event):
+        # отложенный шаг не должен сработать после закрытия окна
+        if event.widget is self:
+            self._cancel_timer()
+
     # ---------- игра ----------
 
     def _apply(self, cells):
@@ -112,15 +198,23 @@ class GameFrame(tk.Frame):
 
     def _update_status(self):
         n = self.session.move_count
-        if self.session.is_won:
-            self.status_label.config(text=f"Уровень пройден! Ходов: {n}")
+        if self._playing:
+            text = f"Показ решения: {self.playback.index} из {self.playback.total}"
+        elif self.session.is_won:
+            text = f"Уровень пройден! Ходов: {n}"
         else:
-            self.status_label.config(text=f"Ходов: {n}")
-        state = "normal" if self.session.can_undo else "disabled"
+            text = f"Ходов: {n}"
+        self.status_label.config(text=text)
+        self.hint_label.config(text=PLAYING_HINT if self._playing else HINT)
+        # во время показа отмена и перезапуск недоступны: они сбили бы решение
+        enabled = self.session.can_undo and not self._playing
+        state = "normal" if enabled else "disabled"
         self.undo_btn.config(state=state)
         self.restart_btn.config(state=state)
 
     def _on_key(self, event):
+        if self._playing:
+            return
         direction = event.keysym if event.keysym in DIRECTIONS else WASD_KEYCODES.get(event.keycode)
         if direction:
             self._apply(self.session.move(direction))
@@ -132,6 +226,8 @@ class GameFrame(tk.Frame):
     def _on_click(self, event):
         """Клик по клетке: игрок идёт туда, если дойти можно, не двигая коробки."""
         self.focus_set()
+        if self._playing:
+            return
         cell = self.board.cell_at(event.x, event.y)
         if cell is not None:
             self._apply(self.session.walk_to(cell))
@@ -151,8 +247,9 @@ class GameFrame(tk.Frame):
         self.on_exit(self.session.is_won, self.session.moves)
 
 
-def play_level(matrix, name="", parent=None, themes=None):
+def play_level(matrix, name="", parent=None, themes=None, solution=None):
     """Открывает окно игры и ждёт, пока игрок его закроет.
+    solution: список ходов солвера для автоматического показа (необязательно).
     Возвращает (won, moves): пройден ли уровень и список сделанных ходов."""
     get_root()                     # корень должен существовать до создания окна
     if themes is None:
@@ -170,7 +267,7 @@ def play_level(matrix, name="", parent=None, themes=None):
         result["won"], result["moves"] = won, moves
         win.destroy()
 
-    frame = GameFrame(win, matrix, name, themes, finish)
+    frame = GameFrame(win, matrix, name, themes, finish, solution)
     frame.pack()
     win.protocol("WM_DELETE_WINDOW", frame.close)
     bring_to_front(win)

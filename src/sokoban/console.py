@@ -2,6 +2,15 @@ from levels.loaders import VALID_CHARS, normalize, parse, parse_txt
 from levels import library
 from paths import LIBRARY_DIR
 
+def choose_solution_action():
+    print("Что сделать с решением?")
+    print("\n 1 - Ввести решение в игру через pyautogui (программа сама нажмёт клавиши в активном окне) \n 2 - Показать решение в окне программы \n 0 - Ничего \n")
+    while True:
+        answer = input().strip()
+        if answer in ("0", "1", "2"):
+            return answer
+        print("Некорректный ввод")
+
 def parse_from_input():
     '''Читает уровень построчно из консоли, заканчивается на 0.
     Возвращает матрицу с условными обозначениями, как parse(name)'''
