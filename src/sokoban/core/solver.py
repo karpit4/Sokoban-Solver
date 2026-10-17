@@ -1,6 +1,7 @@
 from core.heuristics import heuristic
 from core.deadlocks import is_deadlock
 from core.state import State
+from core.rules import apply_move, DIRECTIONS
 import heapq
 
 def matrix_to_states(matrix):
@@ -32,12 +33,7 @@ def matrix_to_states(matrix):
 
 def solve(level):
     start_state = matrix_to_states(level)
-    dirs = {
-        "Up": (-1,0),
-        "Right": (0,1),
-        "Down": (1,0),
-        "Left": (0,-1)
-    }
+
     
     minheap = []
     start_g = 0
@@ -57,26 +53,10 @@ def solve(level):
         if state.is_goal():
             return path 
         
-        for move,(dx,dy) in dirs.items():
-            newx = state.player_pos[0] + dx 
-            newy = state.player_pos[1] + dy 
-            new_player_pos = (newx,newy)
-            
-            if new_player_pos in state.walls:
+        for move,(dx,dy) in DIRECTIONS.items():
+            new_state = apply_move(state,dx,dy)
+            if not new_state:
                 continue
-            
-            new_boxes = set(state.boxes)
-            if new_player_pos in state.boxes:
-                new_box_x = newx + dx
-                new_box_y = newy + dy 
-                new_box_pos = (new_box_x, new_box_y)
-                
-                if new_box_pos in state.walls or new_box_pos in state.boxes:
-                    continue
-                
-                new_boxes.remove(new_player_pos)
-                new_boxes.add(new_box_pos)
-            new_state = State(new_player_pos,state.walls,new_boxes,state.goals)
             
             if is_deadlock(new_state):
                 continue
