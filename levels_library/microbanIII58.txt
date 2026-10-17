@@ -1,0 +1,15 @@
+###############
+#_____________#
+#_#_#_#_#_#_#_#
+#__BXBXBXBXB__#
+#_#XBXBXBXBX#_#
+#__BXBXBXBXB__#
+#_#XBXBXBXBX#_#
+#__BXBXPXBXB__#
+#_#XBXBXBXBX#_#
+#__BXBXBXBXB__#
+#_#XBXBXBXBX#_#
+#__BXBXBXBXB__#
+#_#_#_#_#_#_#_#
+#_____________#
+###############
