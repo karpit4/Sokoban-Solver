@@ -1,7 +1,7 @@
-from heuristics import heuristic
-from deadlocks import is_deadlock
-from state import State 
-import heapq 
+from core.heuristics import heuristic
+from core.deadlocks import is_deadlock
+from core.state import State
+import heapq
 
 def matrix_to_states(matrix):
     """Подаем сюда матрицу, полученную при помощи функции parse. На выходе получаем переменную типа State, соответствующую данной матрице

@@ -1,4 +1,4 @@
-from state import State 
+from core.state import State
 
 def heuristic(state: State):
     """

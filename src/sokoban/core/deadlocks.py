@@ -1,4 +1,4 @@
-from state import State 
+from core.state import State
 
 def is_deadlock(state: State):
     """Подаётся состояние, выводится True если тупик, False если не тупик"""

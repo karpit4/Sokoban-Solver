@@ -5,13 +5,10 @@ import re
 import time
 from datetime import datetime
 
-from parser import parse
-from solver import solve
-from gui.validation import validate
-
-PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-TRAINING_DIR = os.path.join(PROJECT_DIR, "training")
-RESULTS_DIR = os.path.join(PROJECT_DIR, "benchmarks")
+from levels.loaders import parse
+from levels.validation import validate
+from core.solver import solve
+from paths import TRAINING_DIR, BENCHMARKS_DIR as RESULTS_DIR
 TIME_LIMIT = 180          # секунд на один уровень
 IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg")
 

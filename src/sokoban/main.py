@@ -1,11 +1,10 @@
 from datetime import datetime
-from parser import choose_parsing
-from solver import solve
-from runner import execute_solution
+from console import choose_parsing
+from core.solver import solve
+from tools.runner import execute_solution
 from gui.confirm_window import confirm_levels
 from gui.editor_window import edit_level
 from gui.theme import ThemeManager
-
 
 def main():
     themes = ThemeManager()

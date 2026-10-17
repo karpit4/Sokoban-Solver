@@ -1,11 +1,7 @@
 import json
 import os
 from PIL import Image, ImageColor, ImageTk
-
-# папка sokoban (на уровень выше gui)
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DEFAULT_THEME_DIR = os.path.join(BASE_DIR, "textures", "default")
-TEXTURES_DIR = os.path.join(BASE_DIR, "textures")
+from paths import TEXTURES_DIR, DEFAULT_THEME_DIR
 
 
 def list_themes():

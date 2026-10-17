@@ -1,0 +1,12 @@
+{
+  "cells": {
+    "wall": "#C3C3C3",
+    "floor": "#C3C3C3",
+    "box": "#C3C3C3",
+    "goal": "#C3C3C3",
+    "box_on_goal": "#C3C3C3",
+    "player": "#3d85c6",
+    "player_on_goal": "#3d85c6",
+    "unknown": "#cc0000"
+  }
+}

@@ -6,8 +6,9 @@ from gui.app import get_root
 from gui.theme import ThemeManager
 from gui.board_view import BoardView
 from gui.styling import Styler
-from gui.validation import validate
-from gui.level_io import trim, save_txt
+from levels.validation import validate
+from levels.level_io import trim, save_txt
+from paths import LEVELS_DIR, PROJECT_DIR
 
 DEFAULT_SIZE = 16
 MIN_SIZE = 3
@@ -15,10 +16,6 @@ MAX_SIZE = 40
 UNDO_LIMIT = 100
 PAD = 2            # пустое поле вокруг загруженного уровня
 ICON_SIZE = 24
-
-# gui -> sokoban -> src -> Sokoban (корень проекта)
-PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-LEVELS_DIR = os.path.join(PROJECT_DIR, "levels")
 
 # (id, подпись, символ для значка, горячая клавиша)
 TOOLS = [

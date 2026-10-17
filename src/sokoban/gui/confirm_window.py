@@ -4,7 +4,7 @@ from gui.app import get_root
 from gui.board_view import BoardView
 from gui.styling import Styler
 from gui.theme import ThemeManager
-from gui.validation import validate
+from levels.validation import validate
 
 
 class ConfirmWindow:
