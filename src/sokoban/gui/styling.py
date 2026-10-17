@@ -25,3 +25,12 @@ class Styler:
                 if role == "tool":
                     options["selectcolor"] = ui.get("selected_bg", "#2f6fb0")
                 widget.configure(**options)
+            elif role == "entry":
+                widget.configure(bg=ui["button_bg"], fg=ui["button_fg"],
+                                 insertbackground=ui["button_fg"],
+                                 disabledbackground=ui["panel_bg"],
+                                 disabledforeground=ui["panel_bg"])
+            elif role == "list":
+                widget.configure(bg=ui["button_bg"], fg=ui["button_fg"],
+                                 selectbackground=ui.get("selected_bg", "#2f6fb0"),
+                                 selectforeground=ui["button_fg"])

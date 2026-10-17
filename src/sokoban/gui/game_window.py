@@ -8,6 +8,7 @@ from core.state import symbol_at
 from gui.app import bring_to_front, get_root
 from gui.board_view import BoardView
 from gui.styling import Styler
+from gui.settings import open_settings
 from gui.theme import ThemeManager
 
 # Стрелки приходят как keysym ("Up", "Down", "Left", "Right": те же имена, что в DIRECTIONS).
@@ -32,7 +33,7 @@ class GameFrame(tk.Frame):
     solution: список ходов солвера. Если он задан, решение проигрывается автоматически
     (ходы применяются напрямую, фокус окна для этого не нужен)."""
 
-    def __init__(self, master, matrix, name, themes, on_exit, solution=None):
+    def __init__(self, master, matrix, name, themes, on_exit, solution=None, on_settings = None):
         super().__init__(master, padx=12, pady=12)
         self.themes = themes
         self.theme = themes.theme
@@ -64,27 +65,13 @@ class GameFrame(tk.Frame):
         buttons.pack()
         self.undo_btn = self._button(buttons, "Отменить (Z)", self._undo)
         self.restart_btn = self._button(buttons, "Заново (R)", self._restart)
+        settings_btn = self._button(buttons, "Настройки", on_settings) if on_settings else None
         self.exit_btn = self._button(buttons, "Выйти", self.close)
-        for btn in (self.undo_btn, self.restart_btn, self.exit_btn):
-            btn.pack(side="left", padx=4)
+        for btn in (self.undo_btn, self.restart_btn, settings_btn, self.exit_btn):
+            if btn is not None:
+                btn.pack(side="left", padx=4)
 
-        # смена темы: ◀ название ▶
-        theme_row = self._frame(self)
-        theme_row.pack(pady=(8, 0))
-        self.prev_theme_btn = self._button(theme_row, "◀", lambda: self._change_theme(-1), width=3)
-        self.theme_label = self._label(theme_row, width=18)
-        self.next_theme_btn = self._button(theme_row, "▶", lambda: self._change_theme(1), width=3)
-        self.prev_theme_btn.pack(side="left")
-        self.theme_label.pack(side="left", padx=4)
-        self.next_theme_btn.pack(side="left")
-        if len(self.themes.names()) < 2:
-            self.prev_theme_btn.config(state="disabled")
-            self.next_theme_btn.config(state="disabled")
-
-        self.styler.apply(self.theme)
-        self._update_theme_label()
-        self.themes.subscribe(self, self._on_theme_change)
-
+            
         # Клавиши ловит сам Frame, поэтому после каждого нажатия кнопки фокус возвращается ему
         self.bind("<Key>", self._on_key)
         self.bind("<Destroy>", self._on_destroy)
@@ -110,19 +97,11 @@ class GameFrame(tk.Frame):
         btn = tk.Button(parent, text=text, command=run, width=width, relief="flat", pady=4)
         return self.styler.add(btn, "button")
 
-    def _update_theme_label(self):
-        self.theme_label.config(text=f"Тема: {self.themes.name}")
-
-    def _change_theme(self, step):
-        self.themes.cycle(step)      # менеджер сам вызовет _on_theme_change
-
     def _on_theme_change(self, theme):
         self.theme = theme
         self.styler.apply(theme)
-        self._update_theme_label()
         self.board.set_theme(theme)  # перерисовывает текущее положение, а не начальное
         self._update_status()
-
     # ---------- показ решения ----------
 
     def _build_playback_row(self):
@@ -267,7 +246,8 @@ def play_level(matrix, name="", parent=None, themes=None, solution=None):
         result["won"], result["moves"] = won, moves
         win.destroy()
 
-    frame = GameFrame(win, matrix, name, themes, finish, solution)
+    frame = GameFrame(win, matrix, name, themes, finish, solution,
+                      on_settings=lambda: open_settings(themes, win))
     frame.pack()
     win.protocol("WM_DELETE_WINDOW", frame.close)
     bring_to_front(win)

@@ -9,6 +9,7 @@ from gui.styling import Styler
 from levels.validation import validate
 from levels.level_io import trim, save_txt
 from paths import LEVELS_DIR, PROJECT_DIR
+from gui.settings import open_settings
 
 DEFAULT_SIZE = 16
 MIN_SIZE = 3
@@ -134,20 +135,8 @@ class EditorWindow:
         self._button(bottom, "Сохранить в .txt…", self._save, width=18).pack(side="left", padx=3)
         self._button(bottom, "Готово", self._done, width=12).pack(side="left", padx=3)
         self._button(bottom, "Отмена", self._cancel, width=12).pack(side="left", padx=3)
-        self.theme_btn = self._button(bottom, "", self._change_theme, width=18)
-       
-        # смена темы: ◀ название ▶ (отдельная строка под кнопками)
-        theme_row = self._frame(self.win)
-        theme_row.pack(pady=(8, 0))
-        self.prev_theme_btn = self._button(theme_row, "◀", lambda: self._change_theme(-1), width=3)
-        self.theme_label = self._label(theme_row, width=18)
-        self.next_theme_btn = self._button(theme_row, "▶", lambda: self._change_theme(1), width=3)
-        self.prev_theme_btn.pack(side="left")
-        self.theme_label.pack(side="left", padx=4)
-        self.next_theme_btn.pack(side="left")
-        if len(self.themes.names()) < 2:
-            self.prev_theme_btn.config(state="disabled")
-            self.next_theme_btn.config(state="disabled")
+        
+        self._button(bottom, "Настройки", self._open_settings, width=12).pack(side="left", padx=3)
 
         # мышь: левая кнопка рисует выбранным инструментом, правая ставит пол
         c = self.board.canvas
@@ -160,7 +149,6 @@ class EditorWindow:
         self.win.bind("<Control-KeyPress>", self._on_ctrl)
 
         self.styler.apply(self.theme)
-        self._update_theme_button()
         self.themes.subscribe(self.win, self._on_theme_change)
 
         self._refresh()
@@ -188,12 +176,9 @@ class EditorWindow:
         self._icons[symbol] = photo
         return photo
 
-    def _update_theme_button(self):
-        self.theme_label.config(text=f"Тема: {self.themes.name}")
-
-    def _change_theme(self, step):
-        self.themes.cycle(step)      # менеджер сам вызовет _on_theme_change
-        
+    def _open_settings(self):
+        open_settings(self.themes, self.win)
+    
     def _on_theme_change(self, theme):
         """Перекрашивает окно, обновляет значки палитры и перерисовывает поле.
         Нарисованное и стек отмены не затрагиваются."""
@@ -201,7 +186,6 @@ class EditorWindow:
         self.styler.apply(theme)
         for rb, symbol in self._tool_buttons:
             rb.configure(image=self._icon(symbol))
-        self._update_theme_button()
         self.board.set_theme(theme)
         self._refresh()
 

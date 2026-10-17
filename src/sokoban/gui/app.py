@@ -23,3 +23,11 @@ def bring_to_front(win):
     win.after(200, lambda: win.attributes("-topmost", False))
     win.focus_force()
     win.grab_set()
+    
+def set_root(root):
+    """Регистрирует главное окно как корневое: окна, которые берут get_root(),
+    будут открываться поверх него. Вызывать до первого get_root()."""
+    global _root
+    if _root is not None and _root is not root:
+        raise RuntimeError("Корневое окно уже создано")
+    _root = root
