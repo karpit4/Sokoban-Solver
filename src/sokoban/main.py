@@ -1,6 +1,9 @@
 from datetime import datetime
-from console import choose_parsing
+from console import choose_library_level, choose_parsing, choose_play_mode
 from core.solver import solve
+from levels import library
+from levels.validation import validate
+from paths import LIBRARY_DIR
 from tools.runner import execute_solution
 from gui.confirm_window import confirm_levels
 from gui.editor_window import edit_level
@@ -55,10 +58,60 @@ def play_levels(levels_info, themes):
                 break
 
 
+def pick_library_level(mode):
+    """(название, матрица) из библиотеки или None, если выбрать не удалось.
+    mode: "2" - случайный уровень, "3" - выбор по названию."""
+    if mode == "2":
+        name = library.random_name()
+        if name is None:
+            print(f"В библиотеке нет уровней: {LIBRARY_DIR}")
+            return None
+        print(f"Случайный уровень: {name}")
+    else:
+        name = choose_library_level()
+        if name is None:
+            return None
+    try:
+        matrix = library.load(name)
+    except (ValueError, OSError) as e:
+        print(e)
+        return None
+    issues = validate(matrix)
+    if issues:
+        print(f'Уровень "{name}" содержит ошибки, играть нельзя:')
+        for issue in issues:
+            print(" •", issue.message)
+        return None
+    return name, matrix
+
+
+def play_menu(themes):
+    """Выбор, во что играть. После каждой партии возвращается в это же меню."""
+    while True:
+        mode = choose_play_mode()
+        if mode == "0":
+            return
+        if mode == "1":
+            level = edit_level(themes=themes)
+            if level is None:
+                continue
+            levels_info = confirm_levels(
+                [("свой уровень", level)], themes,
+                edit_callback=lambda m, p: edit_level(m, p, themes))
+        else:
+            picked = pick_library_level(mode)
+            levels_info = [picked] if picked else []
+        if levels_info:
+            play_levels(levels_info, themes)
+
+
 def main():
     themes = ThemeManager()
 
-    action = choose_action()
+    if choose_action() == "2":
+        play_menu(themes)
+        return
+
     levels_info = choose_parsing(themes)
     levels_info = confirm_levels(
         levels_info, themes,
@@ -66,11 +119,7 @@ def main():
     if not levels_info:
         print("Нет подтверждённых уровней")
         return
-
-    if action == "1":
-        solve_levels(levels_info)
-    else:
-        play_levels(levels_info, themes)
+    solve_levels(levels_info)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,6 @@
 from levels.loaders import VALID_CHARS, normalize, parse, parse_txt
-
+from levels import library
+from paths import LIBRARY_DIR
 
 def parse_from_input():
     '''Читает уровень построчно из консоли, заканчивается на 0.
@@ -43,6 +44,52 @@ def choose_theme(themes):
         themes.set(chosen)
         print(f"Выбрана тема: {chosen}")
         return
+
+def choose_play_mode():
+    print("====================================================================================")
+    print("Во что играть")
+    print("\n 1 - Свой уровень (конструктор) \n 2 - Случайный уровень \n 3 - Выбрать уровень из библиотеки \n 0 - Выход \n")
+    while True:
+        answer = input().strip()
+        if answer in ("1", "2", "3", "0"):
+            return answer
+        print("Некорректный ввод")
+
+
+def choose_library_level():
+    """Поиск по части названия. Возвращает название уровня или None (назад)."""
+    names = library.list_names()
+    if not names:
+        print(f"В библиотеке нет уровней: {LIBRARY_DIR}")
+        return None
+    print(f"Уровней в библиотеке: {len(names)}")
+    print("Введите часть названия (пустая строка - показать все, 0 - назад)")
+    while True:
+        query = input().strip()
+        if query == "0":
+            return None
+        matches = library.find(query)
+        if not matches:
+            print("Ничего не найдено, попробуйте ещё раз")
+            continue
+        exact = [name for name in matches if name.lower() == query.lower()]
+        if exact or len(matches) == 1:
+            chosen = (exact or matches)[0]
+            print(f"Выбран уровень: {chosen}")
+            return chosen
+        for i, name in enumerate(matches, start=1):
+            print(f" {i} - {name}")
+        print("Введите номер уровня (0 - новый поиск)")
+        while True:
+            answer = input().strip()
+            if answer == "0":
+                break
+            if answer.isdigit() and 1 <= int(answer) <= len(matches):
+                chosen = matches[int(answer) - 1]
+                print(f"Выбран уровень: {chosen}")
+                return chosen
+            print("Некорректный ввод")
+        print("Введите часть названия (пустая строка - показать все, 0 - назад)")
 
 
 def choose_parsing(themes=None) -> list[tuple[str, list]]:
