@@ -170,3 +170,57 @@ class Theme:
         """Вызывать при смене размера клетки, чтобы не копить старые картинки."""
         self._cache.clear()
         self._floor_cache.clear()
+        
+class ThemeManager:
+    """Единственное место, где хранится текущая тема.
+    Окна берут тему отсюда и подписываются на смену, чтобы перекраситься сами."""
+
+    def __init__(self, name="default"):
+        self.name = name
+        self._cache = {}        # название -> объект Theme (один на название)
+        self._listeners = []    # (окно, функция(theme))
+
+    @property
+    def theme(self):
+        """Объект Theme для текущего названия."""
+        if self.name not in self._cache:
+            self._cache[self.name] = Theme(os.path.join(TEXTURES_DIR, self.name))
+        return self._cache[self.name]
+
+    def names(self):
+        return list_themes()
+
+    def set(self, name):
+        """Выбрать тему по названию и сообщить об этом окнам."""
+        if name not in self.names():
+            raise ValueError(f"Нет темы {name!r}")
+        if name == self.name:
+            return
+        self.name = name
+        self._notify()
+
+    def cycle(self, step=1):
+        """Соседняя тема по кругу: step=1 следующая, step=-1 предыдущая."""
+        names = self.names()
+        if not names:
+            return
+        i = names.index(self.name) if self.name in names else (-1 if step > 0 else 0)
+        self.name = names[(i + step) % len(names)]
+        self._notify()
+
+    def subscribe(self, window, callback):
+        """callback(theme) вызывается при каждой смене темы, пока окно открыто.
+        Когда окно закрывается, подписка снимается сама."""
+        entry = (window, callback)
+        self._listeners.append(entry)
+
+        def on_destroy(event):
+            if event.widget is window and entry in self._listeners:
+                self._listeners.remove(entry)
+
+        window.bind("<Destroy>", on_destroy, add="+")
+
+    def _notify(self):
+        theme = self.theme
+        for _, callback in list(self._listeners):
+            callback(theme)

@@ -66,11 +66,37 @@ def parse_from_input():
             row.extend(['#'] * (width - len(row)))
     return field
 
-def choose_parsing(theme_change = None, make_theme = None ) -> list[tuple[str, list]]:
+def choose_theme(themes):
+    """Показывает список тем и применяет выбранную (пустой ввод оставляет текущую)."""
+    names = themes.names()
+    if not names:
+        print("В папке textures нет тем")
+        return
+    print("Доступные темы:")
+    for i, name in enumerate(names, start=1):
+        mark = " (текущая)" if name == themes.name else ""
+        print(f" {i} - {name}{mark}")
+    print("Введите номер или название темы (пустая строка - оставить текущую)")
+    while True:
+        answer = input().strip()
+        if not answer:
+            return
+        if answer.isdigit() and 1 <= int(answer) <= len(names):
+            chosen = names[int(answer) - 1]
+        elif answer in names:
+            chosen = answer
+        else:
+            print("Такой темы нет, попробуйте ещё раз")
+            continue
+        themes.set(chosen)
+        print(f"Выбрана тема: {chosen}")
+        return
+
+def choose_parsing(themes=None ) -> list[tuple[str, list]]:
     print("====================================================================================")
     print("Выберите способ считать уровень")
     print("\n 1 - Считать имена файлов (png,jpg) через пробел \n 2 - Считать уровень построчно \n 3 - Считать уровни построчно из .txt \n 4 - Считать уровень из конструктора ")
-    if theme_change:
+    if themes is not None:
         print(" 5 - Сменить тему оформления \n")
     while True:
         mode = input()
@@ -113,16 +139,16 @@ def choose_parsing(theme_change = None, make_theme = None ) -> list[tuple[str, l
             from gui.editor_window import edit_level
             levels = []
             while True:
-                level = edit_level(theme=make_theme() if make_theme else None)
+                level = edit_level(themes=themes)
                 if level is not None:
                     levels.append((f"constructor #{len(levels) + 1}", level))
                 print("Создать ещё один уровень? 1 - да, 0 - нет")
                 if input().strip() != "1":
                     break
             return levels
-        if mode == "5" and theme_change:
-            theme_change()
-            return choose_parsing(theme_change, make_theme)
+        if mode == "5" and themes is not None:
+            choose_theme(themes)
+            return choose_parsing(themes)
         
         print("Некорректный ввод")
     

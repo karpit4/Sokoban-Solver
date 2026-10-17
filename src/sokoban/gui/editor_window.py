@@ -3,8 +3,9 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 
 from gui.app import get_root
-from gui.theme import Theme
+from gui.theme import ThemeManager
 from gui.board_view import BoardView
+from gui.styling import Styler
 from gui.validation import validate
 from gui.level_io import trim, save_txt
 
@@ -66,75 +67,90 @@ def _cells_between(a, b):
 
 
 class EditorWindow:
-    
-    def __init__(self, matrix, parent, theme):
-        self.theme = theme
+
+    def __init__(self, matrix, parent, themes):
+        self.themes = themes
+        self.theme = themes.theme
         self.result = None
         self._original = None    # задаётся ниже, после создания поля
         self._undo = []          # снимки матрицы до каждого действия
         self._before = None      # снимок на начало текущего мазка
         self._last_cell = None
         self._icons = {}         # ссылки на значки палитры
+        self._tool_buttons = []  # (кнопка палитры, символ значка)
+        self.styler = Styler()
 
-        ui = theme.ui
         self.win = tk.Toplevel(get_root() if parent is None else parent)
         if parent is not None:
             self.win.transient(parent)
         self.win.title("Конструктор уровня")
-        self.win.configure(bg=ui["window_bg"], padx=12, pady=12)
+        self.win.configure(padx=12, pady=12)
+        self.styler.add(self.win, "bg")
         self.win.resizable(False, False)
         self.win.protocol("WM_DELETE_WINDOW", self._cancel)
 
         # палитра
         self.tool = tk.StringVar(value="wall")
-        toolbar = tk.Frame(self.win, bg=ui["window_bg"])
+        toolbar = self._frame(self.win)
         toolbar.pack(pady=(0, 8))
         for tool_id, text, symbol, key in TOOLS:
-            tk.Radiobutton(
+            rb = tk.Radiobutton(
                 toolbar, text=f" {key}  {text}", value=tool_id, variable=self.tool,
                 image=self._icon(symbol), compound="left", indicatoron=False,
-                bg=ui["button_bg"], fg=ui["button_fg"],
-                selectcolor=ui.get("selected_bg", "#2f6fb0"),
-                activebackground=ui["panel_bg"], activeforeground=ui["button_fg"],
-                relief="flat", padx=8, pady=4,
-            ).pack(side="left", padx=2)
+                relief="flat", padx=8, pady=4)
+            rb.pack(side="left", padx=2)
+            self.styler.add(rb, "tool")
+            self._tool_buttons.append((rb, symbol))
             self.win.bind(f"<Key-{key}>", lambda e, t=tool_id: self.tool.set(t))
 
         # поле
-        self.board = BoardView(self.win, theme)
+        self.board = BoardView(self.win, self.theme)
         self.board.pack()
         self.board.set_matrix(self._initial_matrix(matrix))
         self._start = self.board.get_matrix()
         self._original = trim(self._start) if matrix else None
 
         # размер: для каждой стороны пара кнопок + и −
-        size_row = tk.Frame(self.win, bg=ui["window_bg"])
+        size_row = self._frame(self.win)
         size_row.pack(pady=(8, 0))
         for side, title in (("top", "Сверху"), ("bottom", "Снизу"),
                             ("left", "Слева"), ("right", "Справа")):
-            group = tk.Frame(size_row, bg=ui["window_bg"])
+            group = self._frame(size_row)
             group.pack(side="left", padx=8)
-            tk.Label(group, text=title, bg=ui["window_bg"], fg=ui["button_fg"],
-                     font=("Segoe UI", 9)).pack()
-            pair = tk.Frame(group, bg=ui["window_bg"])
+            self._label(group, text=title, font=("Segoe UI", 9)).pack()
+            pair = self._frame(group)
             pair.pack()
             self._button(pair, "+", lambda s=side: self._resize(s, 1), width=4).pack(side="left", padx=1)
             self._button(pair, "−", lambda s=side: self._resize(s, -1), width=4).pack(side="left", padx=1)
 
-        self.size_label = tk.Label(self.win, bg=ui["window_bg"], fg=ui["button_fg"],
-                                   font=("Segoe UI", 9))
+        self.size_label = self._label(self.win, font=("Segoe UI", 9))
         self.size_label.pack(pady=(6, 0))
-        self.status_label = tk.Label(self.win, bg=ui["window_bg"], justify="left", anchor="w",
-                                     wraplength=560, height=2, font=("Segoe UI", 10))
+        self.status_label = self.styler.add(
+            tk.Label(self.win, justify="left", anchor="w", wraplength=560, height=2,
+                     font=("Segoe UI", 10)), "bg")      # цвет текста задаёт _refresh
         self.status_label.pack(fill="x", pady=4)
 
         # нижние кнопки
-        bottom = tk.Frame(self.win, bg=ui["window_bg"])
+        bottom = self._frame(self.win)
         bottom.pack(pady=(4, 0))
         self._button(bottom, "Отменить (Ctrl+Z)", self._undo_step, width=18).pack(side="left", padx=3)
         self._button(bottom, "Сохранить в .txt…", self._save, width=18).pack(side="left", padx=3)
         self._button(bottom, "Готово", self._done, width=12).pack(side="left", padx=3)
         self._button(bottom, "Отмена", self._cancel, width=12).pack(side="left", padx=3)
+        self.theme_btn = self._button(bottom, "", self._change_theme, width=18)
+       
+        # смена темы: ◀ название ▶ (отдельная строка под кнопками)
+        theme_row = self._frame(self.win)
+        theme_row.pack(pady=(8, 0))
+        self.prev_theme_btn = self._button(theme_row, "◀", lambda: self._change_theme(-1), width=3)
+        self.theme_label = self._label(theme_row, width=18)
+        self.next_theme_btn = self._button(theme_row, "▶", lambda: self._change_theme(1), width=3)
+        self.prev_theme_btn.pack(side="left")
+        self.theme_label.pack(side="left", padx=4)
+        self.next_theme_btn.pack(side="left")
+        if len(self.themes.names()) < 2:
+            self.prev_theme_btn.config(state="disabled")
+            self.next_theme_btn.config(state="disabled")
 
         # мышь: левая кнопка рисует выбранным инструментом, правая ставит пол
         c = self.board.canvas
@@ -146,16 +162,25 @@ class EditorWindow:
         c.bind("<ButtonRelease-3>", self._release)
         self.win.bind("<Control-KeyPress>", self._on_ctrl)
 
+        self.styler.apply(self.theme)
+        self._update_theme_button()
+        self.themes.subscribe(self.win, self._on_theme_change)
+
         self._refresh()
         self._bring_to_front()
+
     # ---------- оформление ----------
 
+    def _frame(self, parent):
+        return self.styler.add(tk.Frame(parent), "bg")
+
+    def _label(self, parent, **options):
+        return self.styler.add(tk.Label(parent, **options), "label")
+
     def _button(self, parent, text, command, width):
-        ui = self.theme.ui
-        return tk.Button(parent, text=text, command=command, width=width,
-                         bg=ui["button_bg"], fg=ui["button_fg"],
-                         activebackground=ui["panel_bg"], activeforeground=ui["button_fg"],
-                         relief="flat", pady=4)
+        btn = tk.Button(parent, text=text, command=command, width=width,
+                        relief="flat", pady=4)
+        return self.styler.add(btn, "button")
 
     def _icon(self, symbol):
         """Значок палитры: текстура темы или, если её нет, цветной квадрат."""
@@ -165,6 +190,23 @@ class EditorWindow:
             photo.put(self.theme.get_color(symbol), to=(0, 0, ICON_SIZE, ICON_SIZE))
         self._icons[symbol] = photo
         return photo
+
+    def _update_theme_button(self):
+        self.theme_label.config(text=f"Тема: {self.themes.name}")
+
+    def _change_theme(self, step):
+        self.themes.cycle(step)      # менеджер сам вызовет _on_theme_change
+        
+    def _on_theme_change(self, theme):
+        """Перекрашивает окно, обновляет значки палитры и перерисовывает поле.
+        Нарисованное и стек отмены не затрагиваются."""
+        self.theme = theme
+        self.styler.apply(theme)
+        for rb, symbol in self._tool_buttons:
+            rb.configure(image=self._icon(symbol))
+        self._update_theme_button()
+        self.board.set_theme(theme)
+        self._refresh()
 
     def _bring_to_front(self):
         self.win.update_idletasks()
@@ -321,12 +363,14 @@ class EditorWindow:
         self.win.destroy()
 
 
-def edit_level(matrix=None, parent=None, theme=None):
+def edit_level(matrix=None, parent=None, themes=None):
     """Открывает редактор. matrix=None: новый уровень с нуля (сетка 16×16).
+    themes: ThemeManager (если не передать, создаётся новый).
     Возвращает матрицу без пустых краёв или None (отмена или нет изменений).
     Подходит как edit_callback для confirm_levels."""
-    get_root()                 # корень должен существовать до создания Theme
-    theme = theme or Theme()
-    window = EditorWindow(matrix, parent, theme)
+    get_root()                 # корень должен существовать до создания окна
+    if themes is None:
+        themes = ThemeManager()
+    window = EditorWindow(matrix, parent, themes)
     window.win.wait_window()
     return window.result
