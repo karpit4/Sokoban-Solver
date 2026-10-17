@@ -24,25 +24,55 @@ class State:
         '''Функция возвращает True, если все коробки стоят по местам.'''
         return self.boxes == self.goals
 
+def matrix_to_state(matrix):
+    """Принимает матрицу уровня (как возвращают parse, parse_txt и конструктор)
+    и возвращает соответствующий State.
+    Можно также вручную нарисовать поле списком списков, соблюдая обозначения из Colors."""
+    walls, boxes, goals = [], [], []
+    player = None
+
+    for i, row in enumerate(matrix):
+        for j, cell in enumerate(row):
+            if cell == "#":
+                walls.append((i, j))
+            elif cell == "B":
+                boxes.append((i, j))
+            elif cell == "P":
+                player = (i, j)
+            elif cell == "X":
+                goals.append((i, j))
+            elif cell == "G":
+                goals.append((i, j))
+                boxes.append((i, j))
+            elif cell == "Q":
+                player = (i, j)
+                goals.append((i, j))
+
+    return State(player, walls, boxes, goals)
+
+
+def symbol_at(state: State, pos):
+    """Символ клетки pos (как в Colors) с учётом цели под коробкой и игроком.
+    Нужен, чтобы после хода перерисовать только изменившиеся клетки."""
+    if pos in state.walls:
+        return "#"
+    on_goal = pos in state.goals
+    if pos in state.boxes:
+        return "G" if on_goal else "B"
+    if pos == state.player_pos:
+        return "Q" if on_goal else "P"
+    return "X" if on_goal else "_"
+
+
 def state_to_matrix(state: State):
-    '''Принимает State и делает из него матрицу с обозначениями как в Colors.'''
+    '''Принимает State и делает из него матрицу с обозначениями как в Colors.
+    Размер поля берётся по стенам, поэтому уровень должен быть замкнут стенами.'''
     rows = max(x for x, _ in state.walls) + 1
     cols = max(y for _, y in state.walls) + 1
-    Matrix = [["_"] * cols for _ in range(rows)]
+    return [[symbol_at(state, (i, j)) for j in range(cols)] for i in range(rows)]
 
-    for x, y in state.goals:
-        Matrix[x][y] = "X"
-    for x, y in state.walls:
-        Matrix[x][y] = "#"
-    for x, y in state.boxes:
-        Matrix[x][y] = "G" if (x, y) in state.goals else "B"
-    px, py = state.player_pos
-    Matrix[px][py] = "Q" if (px, py) in state.goals else "P"
-    return Matrix
-
-
-
-
-def Equal_states(first: State, second: State):
-    '''Возвращает, равны ли два состояния'''
-    return (first.player_pos == second.player_pos) and (first.boxes == second.boxes)
+def changed_cells(old: State, new: State):
+    """Клетки, символ которых различается в двух состояниях одного уровня:
+    старая и новая позиция игрока и клетки, где коробка появилась или исчезла.
+    Стены и цели у состояний одного уровня одинаковы."""
+    return {old.player_pos, new.player_pos} | (old.boxes ^ new.boxes)

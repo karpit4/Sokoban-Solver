@@ -1,38 +1,11 @@
 from core.heuristics import heuristic
 from core.deadlocks import is_deadlock
-from core.state import State
+from core.state import matrix_to_state
 from core.rules import apply_move, DIRECTIONS
 import heapq
 
-def matrix_to_states(matrix):
-    """Подаем сюда матрицу, полученную при помощи функции parse. На выходе получаем переменную типа State, соответствующую данной матрице
-        Можно также вручную нарисовать поле при помощи списка списков, но строго соблюдая обозначения из Colors."""
-    level = matrix
-    walls,boxes,goals = [],[],[]
-    player = 0
-
-    for i in range(len(level)): #заполняем walls,boxes,goals, player для инициализации State
-        for j in range(len(level[0])):
-            if level[i][j] == "#":
-                walls.append((i,j))
-            elif level[i][j] == "B":
-                boxes.append((i,j))
-            elif level[i][j] == "P":
-                player = (i,j)
-            elif level[i][j] == "X":
-                goals.append((i,j))
-            elif level[i][j] == "G":
-                goals.append((i,j))
-                boxes.append((i,j))
-            elif level[i][j] == "Q":
-                player = (i,j)
-                goals.append((i,j))
-                
-    Ans = State(player,walls,boxes,goals)
-    return Ans
-
 def solve(level):
-    start_state = matrix_to_states(level)
+    start_state = matrix_to_state(level)
 
     
     minheap = []

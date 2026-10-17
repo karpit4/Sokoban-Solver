@@ -33,7 +33,7 @@ def apply_move(state : State , dx , dy):
     return new_state
 
 
-def is_accessible(state, target):
+def is_accessable(state, target):
     """Может ли игрок дойти до target, НЕ двигая коробки. Возвращает (bool, dist)."""
     if target in state.walls or target in state.boxes:
         return (False, -1)
@@ -54,3 +54,37 @@ def is_accessible(state, target):
                 return (True, d + 1)
             queue.append(n)
     return (False, -1)
+
+def find_path(state, target):
+    """Кратчайший путь игрока до клетки target, НЕ двигая коробки.
+    Возвращает список направлений (["Up", "Left", ...]), пустой список,
+    если игрок уже там, и None, если дойти нельзя."""
+    if target in state.walls or target in state.boxes:
+        return None
+    if state.player_pos == target:
+        return []
+
+    # поле ограничено стенами; без этого на незамкнутом уровне поиск не закончился бы
+    max_x = max((x for x, _ in state.walls), default=0)
+    max_y = max((y for _, y in state.walls), default=0)
+
+    parent = {state.player_pos: None}      # клетка -> (предыдущая клетка, направление)
+    queue = collections.deque([state.player_pos])
+    while queue:
+        cell = queue.popleft()
+        for name, (dx, dy) in DIRECTIONS.items():
+            n = (cell[0] + dx, cell[1] + dy)
+            if n in parent or n in state.walls or n in state.boxes:
+                continue
+            if not (0 <= n[0] <= max_x and 0 <= n[1] <= max_y):
+                continue
+            parent[n] = (cell, name)
+            if n == target:
+                path = []
+                while parent[n] is not None:
+                    n, direction = parent[n]
+                    path.append(direction)
+                path.reverse()
+                return path
+            queue.append(n)
+    return None
