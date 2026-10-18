@@ -70,11 +70,13 @@ class GameFrame(tk.Frame):
         for btn in (self.undo_btn, self.restart_btn, settings_btn, self.exit_btn):
             if btn is not None:
                 btn.pack(side="left", padx=4)
-
+        
+        self.styler.apply(self.theme)
+        self.themes.subscribe(self, self._on_theme_change)
             
         # Клавиши ловит сам Frame, поэтому после каждого нажатия кнопки фокус возвращается ему
         self.bind("<Key>", self._on_key)
-        self.bind("<Destroy>", self._on_destroy)
+        self.bind("<Destroy>", self._on_destroy, add="+")   # add="+": иначе пропадёт отписка от темы
         self.board.canvas.bind("<Button-1>", self._on_click)
         self._update_status()
 

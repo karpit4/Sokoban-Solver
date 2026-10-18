@@ -218,5 +218,12 @@ class ThemeManager:
 
     def _notify(self):
         theme = self.theme
+        for entry in list(self._listeners):
+            window, callback = entry
+            if not window.winfo_exists():      # окно уже закрыто, а подписка осталась
+                self._listeners.remove(entry)
+                continue
+            callback(theme)
+        theme = self.theme
         for _, callback in list(self._listeners):
             callback(theme)

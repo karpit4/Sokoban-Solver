@@ -1,6 +1,6 @@
-from datetime import datetime
+import time
+from core.solve_job import CANCELLED, NO_SOLUTION, SOLVED, SolveJob
 from console import choose_library_level, choose_parsing, choose_play_mode, choose_solution_action
-from core.solver import solve
 from levels import library
 from levels.validation import validate
 from paths import LIBRARY_DIR
@@ -21,29 +21,44 @@ def choose_action():
             return answer
         print("Некорректный ввод")
 
+def run_solver(level):
+    """Запускает поиск решения в отдельном процессе и ждёт его конца.
+    Ctrl+C отменяет поиск. Возвращает SolveJob."""
+    job = SolveJob(level)
+    print("Идёт поиск решения (Ctrl+C - отмена)...")
+    try:
+        while not job.poll():
+            time.sleep(0.2)
+    except KeyboardInterrupt:
+        job.cancel()
+    return job
+
+
 def solve_levels(levels_info, themes):
-    for name, level in levels_info:
-        start_time = datetime.now()
-        reshenie = solve(level)
-        if reshenie is not None:
+    for n, (name, level) in enumerate(levels_info):
+        job = run_solver(level)
 
-            end_time = datetime.now()
-            diff = end_time - start_time
-
-            print("=====================================================================================")
-            print(f"Уровень: {name}")
-            print(f"Решение найдено. Ходов: {len(reshenie)}")
-            print(f"Затрачено {diff.seconds // (60*60)} часов {(diff.seconds//60)%60} минут и {diff.seconds%60} секунд")
+        print("=====================================================================================")
+        print(f"Уровень: {name}")
+        if job.status == SOLVED:
+            seconds = int(job.solver_time)
+            print(f"Решение найдено. Ходов: {len(job.path)}")
+            print(f"Затрачено {seconds // (60*60)} часов {(seconds//60)%60} минут и {seconds%60} секунд")
             action = choose_solution_action()
             if action == "1":
-                execute_solution(reshenie)
+                execute_solution(job.path)
             elif action == "2":
-                play_level(level, f"{name}: решение солвера", themes=themes, solution=reshenie)
-
-        else:
-            print("=====================================================================================")
-            print(f"Уровень: {name}")
+                play_level(level, f"{name}: решение солвера", themes=themes, solution=job.path)
+        elif job.status == NO_SOLUTION:
             print("Решений не найдено")
+        elif job.status == CANCELLED:
+            print("Поиск отменён")
+            if n < len(levels_info) - 1:
+                print("Перейти к следующему уровню? 1 - да, 0 - нет")
+                if input().strip() != "1":
+                    break
+        else:
+            print(f"Ошибка при решении: {job.error}")
 
 def play_levels(levels_info, themes):
     for n, (name, level) in enumerate(levels_info):
@@ -94,9 +109,7 @@ def play_menu(themes):
             level = edit_level(themes=themes)
             if level is None:
                 continue
-            levels_info = confirm_levels(
-                [("свой уровень", level)], themes,
-                edit_callback=lambda m, p: edit_level(m, p, themes))
+            levels_info = [("свой уровень", level)]
         else:
             picked = pick_library_level(mode)
             levels_info = [picked] if picked else []
@@ -111,15 +124,15 @@ def main():
         play_menu(themes)
         return
 
-    levels_info = choose_parsing(themes)
-    levels_info = confirm_levels(
-        levels_info, themes,
-        edit_callback=lambda m, p: edit_level(m, p, themes))
+    levels_info, needs_confirmation = choose_parsing(themes)
+    if needs_confirmation:
+        levels_info = confirm_levels(
+            levels_info, themes,
+            edit_callback=lambda m, p: edit_level(m, p, themes))
     if not levels_info:
         print("Нет подтверждённых уровней")
         return
     solve_levels(levels_info, themes)
-
 
 if __name__ == "__main__":
     main()

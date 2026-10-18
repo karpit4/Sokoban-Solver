@@ -133,7 +133,8 @@ class EditorWindow:
         bottom.pack(pady=(4, 0))
         self._button(bottom, "Отменить (Ctrl+Z)", self._undo_step, width=18).pack(side="left", padx=3)
         self._button(bottom, "Сохранить в .txt…", self._save, width=18).pack(side="left", padx=3)
-        self._button(bottom, "Готово", self._done, width=12).pack(side="left", padx=3)
+        self.done_btn = self._button(bottom, "Готово", self._done, width=12)
+        self.done_btn.pack(side="left", padx=3)
         self._button(bottom, "Отмена", self._cancel, width=12).pack(side="left", padx=3)
         
         self._button(bottom, "Настройки", self._open_settings, width=12).pack(side="left", padx=3)
@@ -309,6 +310,9 @@ class EditorWindow:
                                      fg=ui["error_outline"])
         else:
             self.status_label.config(text="Ошибок не найдено", fg=ui["button_fg"])
+
+        # «Готово» доступно, только если уровень корректен; сохранить черновик можно всегда
+        self.done_btn.config(state="disabled" if issues else "normal")
 
     # ---------- сохранение и выход ----------
 

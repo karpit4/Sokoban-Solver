@@ -1,7 +1,7 @@
 from gui.screens.base import Screen
-from gui.screens.placeholder import PlaceholderScreen
 from gui.screens.play_menu import PlayMenuScreen
-from gui.screens.settings import SettingsScreen
+from gui.screens.settings_screen import SettingsScreen
+from gui.screens.solve_menu import SolveMenuScreen
 
 
 class MenuScreen(Screen):
@@ -25,7 +25,7 @@ class MenuScreen(Screen):
         self.app.show(PlayMenuScreen, self._back)
 
     def _solve(self):
-        self.app.show(PlaceholderScreen, "Решить уровень", back=self._back)
+        self.app.show(SolveMenuScreen, self._back)
 
     def _settings(self):
         self.app.show(SettingsScreen, self._back)

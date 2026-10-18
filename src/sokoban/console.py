@@ -101,7 +101,8 @@ def choose_library_level():
         print("Введите часть названия (пустая строка - показать все, 0 - назад)")
 
 
-def choose_parsing(themes=None) -> list[tuple[str, list]]:
+def choose_parsing(themes=None) -> tuple[list[tuple[str, list]], bool]:
+    """Возвращает (уровни, нужно_ли_подтверждение): уровни из конструктора уже проверены."""
     print("====================================================================================")
     print("Выберите способ считать уровень")
     print("\n 1 - Считать имена файлов (png,jpg) через пробел \n 2 - Считать уровень построчно \n 3 - Считать уровни построчно из .txt \n 4 - Считать уровень из конструктора ")
@@ -119,13 +120,13 @@ def choose_parsing(themes=None) -> list[tuple[str, list]]:
                     print(f'Файл "{file_name}" не найден')
                     continue
                 levels.append((file_name, level))
-            return levels
+            return levels, True 
 
         if mode == "2":
             print("================================Условные обозначения================================")
             print("\n# - стена \n_ - пустая клетка \nB - коробка \nP - игрок \nX - конечная клетка \nG - коробка на конечной клетке \nQ - игрок на конечной клетке \n")
             print("Введите уровень построчно, закончите, введя 0")
-            return [("manual level", parse_from_input())]
+            return [("manual level", parse_from_input())], True
 
         if mode == "3":
             print("================================Условные обозначения================================")
@@ -142,7 +143,7 @@ def choose_parsing(themes=None) -> list[tuple[str, list]]:
                         levels.append((file_name, level))
                     else:
                         levels.append((f"{file_name} #{i}", level))
-            return levels
+            return levels, True 
 
         if mode == "4":
             from gui.editor_window import edit_level
@@ -154,7 +155,7 @@ def choose_parsing(themes=None) -> list[tuple[str, list]]:
                 print("Создать ещё один уровень? 1 - да, 0 - нет")
                 if input().strip() != "1":
                     break
-            return levels
+            return levels, False 
         if mode == "5" and themes is not None:
             choose_theme(themes)
             return choose_parsing(themes)

@@ -2,6 +2,7 @@ import tkinter as tk
 
 from gui.app import get_root
 from gui.board_view import BoardView
+from gui.settings import open_settings
 from gui.styling import Styler
 from gui.theme import ThemeManager
 from levels.validation import validate
@@ -9,7 +10,7 @@ from levels.validation import validate
 
 class ConfirmWindow:
     """Показывает уровни по одному: Подтвердить / Изменить / Пропустить.
-    Кнопка темы переключает оформление по кругу."""
+    Тема меняется в настройках, поле при этом перерисовывается сразу."""
 
     def __init__(self, levels, themes, edit_callback):
         self.levels = [(name, [list(row) for row in matrix]) for name, matrix in levels]
@@ -39,46 +40,27 @@ class ConfirmWindow:
 
         self.buttons_frame = self.styler.add(tk.Frame(self.win), "bg")
         self.buttons_frame.pack()
-        
+
         self.confirm_btn = self._button("Подтвердить", self._confirm)
         self.edit_btn = self._button("Изменить", self._edit)
         self.skip_btn = self._button("Пропустить", self._skip)
-        for btn in (self.confirm_btn, self.edit_btn, self.skip_btn):
+        self.settings_btn = self._button("Настройки", self._open_settings)
+        for btn in (self.confirm_btn, self.edit_btn, self.skip_btn, self.settings_btn):
             btn.pack(side="left", padx=4)
         if self.edit_callback is None:
             self.edit_btn.config(state="disabled")
 
-        # смена темы: ◀ название ▶
-        theme_box = self.styler.add(tk.Frame(self.buttons_frame), "bg")
-        theme_box.pack(side="left", padx=(12, 4))
-        self.prev_theme_btn = self._button("◀", lambda: self._change_theme(-1),
-                                           width=3, parent=theme_box)
-        self.theme_label = self.styler.add(tk.Label(theme_box, width=18), "label")
-        self.next_theme_btn = self._button("▶", lambda: self._change_theme(1),
-                                           width=3, parent=theme_box)
-        self.prev_theme_btn.pack(side="left")
-        self.theme_label.pack(side="left", padx=4)
-        self.next_theme_btn.pack(side="left")
-        if len(self.themes.names()) < 2:
-            self.prev_theme_btn.config(state="disabled")
-            self.next_theme_btn.config(state="disabled")
-
         self.styler.apply(self.theme)
-        self._update_theme_button()
         self.themes.subscribe(self.win, self._on_theme_change)
 
         self.win.bind("<Return>", lambda e: self._confirm())
         self._show_level()
         self._bring_to_front()
 
-
-    def _button(self, text, command, width=14, parent=None):
-        btn = tk.Button(parent or self.buttons_frame, text=text, command=command,
+    def _button(self, text, command, width=14):
+        btn = tk.Button(self.buttons_frame, text=text, command=command,
                         width=width, relief="flat", pady=4)
         return self.styler.add(btn, "button")
-
-    def _update_theme_button(self):
-        self.theme_label.config(text=f"Тема: {self.themes.name}")
 
     def _bring_to_front(self):
         """Окно создаётся из консольной программы и иначе может оказаться под другими окнами."""
@@ -92,16 +74,15 @@ class ConfirmWindow:
         self.win.focus_force()
         self.win.grab_set()
 
-    # ---------- смена темы ----------
+    # ---------- настройки и смена темы ----------
 
-    def _change_theme(self, step):
-        self.themes.cycle(step)      # менеджер сам вызовет _on_theme_change
+    def _open_settings(self):
+        open_settings(self.themes, self.win)
 
     def _on_theme_change(self, theme):
-        """Вызывается менеджером, в том числе когда тему сменили в редакторе."""
+        """Вызывается менеджером, в том числе когда тему сменили в настройках или в редакторе."""
         self.theme = theme
         self.styler.apply(theme)
-        self._update_theme_button()
         self.board.set_theme(theme)
         self._refresh_issues()
 
