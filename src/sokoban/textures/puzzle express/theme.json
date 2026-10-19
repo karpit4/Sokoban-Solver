@@ -8,5 +8,14 @@
     "player": "#3d85c6",
     "player_on_goal": "#3d85c6",
     "unknown": "#cc0000"
+  },
+  "ui": {
+    "window_bg": "#8c8c8c",
+    "panel_bg": "#3a3a3a",
+    "button_bg": "#4a4a4a",
+    "button_fg": "#ffffff",
+    "grid_line": "#222222",
+    "error_outline": "#ff3333",
+    "selected_bg": "#2f6fb0"
   }
 }

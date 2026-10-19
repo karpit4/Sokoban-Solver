@@ -1,0 +1,21 @@
+{
+  "cells": {
+    "wall": "#5b5b5b",
+    "floor": "#e8e0c8",
+    "box": "#b5792f",
+    "goal": "#e8c547",
+    "box_on_goal": "#6aa84f",
+    "player": "#3d85c6",
+    "player_on_goal": "#3d85c6",
+    "unknown": "#cc0000"
+  },
+  "ui": {
+    "window_bg": "#2b2b2b",
+    "panel_bg": "#3a3a3a",
+    "button_bg": "#4a4a4a",
+    "button_fg": "#ffffff",
+    "grid_line": "#222222",
+    "error_outline": "#ff3333",
+    "selected_bg": "#2f6fb0"
+  }
+}
