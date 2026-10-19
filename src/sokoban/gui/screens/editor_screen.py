@@ -9,7 +9,8 @@ class EditorScreen(Screen):
 
     def __init__(self, master, app, matrix, on_done, on_cancel):
         super().__init__(master, app)
-        self.editor = EditorFrame(self, matrix, app.themes, on_done, on_cancel)
+        self.editor = EditorFrame(self, matrix, app.themes, on_done, on_cancel,
+                                  on_settings=app.open_settings)
         self.editor.pack()
 
     def focus_set(self):

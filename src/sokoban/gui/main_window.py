@@ -2,16 +2,18 @@ import tkinter as tk
 
 from gui.app import set_root
 from gui.screens.menu import MenuScreen
+from gui.screens.settings_screen import SettingsScreen
 from gui.styling import Styler
 from gui.theme import ThemeManager
 
 MIN_WIDTH, MIN_HEIGHT = 520, 380
-TASKBAR = 80
+TASKBAR = 80          # запас снизу под панель задач
 
 
 class App:
     """Главное окно программы: контейнер, в котором по очереди показываются экраны.
-    Тема меняется в настройках."""
+    show() заменяет экран новым, push() открывает экран поверх текущего, не уничтожая его,
+    а pop() возвращает спрятанный экран. Тема меняется в настройках."""
 
     def __init__(self, themes=None):
         self.root = tk.Tk()
@@ -22,6 +24,8 @@ class App:
         self.styler = Styler()
         self.styler.add(self.root, "bg")
         self.screen = None
+        self._hidden = []              # экраны, спрятанные через push; возвращаются по pop
+        self._size_frozen = False
 
         self.container = self.styler.add(tk.Frame(self.root), "bg")
         self.container.pack(fill="both", expand=True)
@@ -32,16 +36,73 @@ class App:
     def _on_theme_change(self, theme):
         self.styler.apply(theme)
 
+    # ---------- смена экранов ----------
+
     def show(self, screen_class, *args, **kwargs):
-        """Заменяет текущий экран новым: screen_class(container, app, *args, **kwargs)."""
+        """Заменяет текущий экран новым: screen_class(container, app, *args, **kwargs).
+        Экраны, спрятанные через push, при этом отбрасываются."""
         screen = screen_class(self.container, self, *args, **kwargs)
+        for hidden in self._hidden:
+            hidden.destroy()
+        self._hidden.clear()
+        self._unfreeze_size()
         if self.screen is not None:
             self.screen.destroy()
+        self._display(screen)
+        self._keep_on_screen()
+
+    def push(self, screen_class, *args, **kwargs):
+        """Показывает экран поверх текущего. Текущий не уничтожается, а прячется со всем
+        состоянием (рисунок, партия, позиция) и возвращается по pop().
+        Размер окна на это время фиксируется, чтобы оно не прыгало."""
+        current = self.screen
+        screen = screen_class(self.container, self, *args, **kwargs)
+        self._freeze_size()
+        current.on_hide()
+        current.pack_forget()
+        self._hidden.append(current)
+        self._display(screen)
+
+    def pop(self):
+        """Закрывает экран, открытый через push, и возвращает спрятанный."""
+        if not self._hidden:
+            return
+        top = self.screen
+        previous = self._hidden.pop()
+        top.destroy()
+        previous.pack(fill="both", expand=True)
+        self.screen = previous
+        if not self._hidden:
+            self._unfreeze_size()
+        previous.on_show()
+        previous.focus_set()
+        self._keep_on_screen()
+
+    def open_settings(self):
+        """Настройки поверх текущего экрана: после «Назад» всё остаётся на своих местах."""
+        if not isinstance(self.screen, SettingsScreen):
+            self.push(SettingsScreen, back=self.pop)
+
+    def _display(self, screen):
         screen.styler.apply(self.themes.theme)
         screen.pack(fill="both", expand=True)
         screen.focus_set()
         self.screen = screen
-        self._keep_on_screen()
+
+    # ---------- размер и положение окна ----------
+
+    def _freeze_size(self):
+        """Фиксирует текущий размер окна, пока экран закрыт другим."""
+        if not self._size_frozen:
+            self.root.update_idletasks()
+            self.root.geometry(f"{self.root.winfo_width()}x{self.root.winfo_height()}")
+            self._size_frozen = True
+
+    def _unfreeze_size(self):
+        """Возвращает окну размер по содержимому."""
+        if self._size_frozen:
+            self.root.geometry("")
+            self._size_frozen = False
 
     def run(self):
         self.show(MenuScreen)

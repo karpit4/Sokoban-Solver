@@ -2,7 +2,6 @@ from tkinter import messagebox
 
 from gui.game_window import GameFrame
 from gui.screens.base import Screen
-from gui.settings import open_settings
 from levels import library
 from levels.validation import validate
 
@@ -21,9 +20,14 @@ class GameScreen(Screen):
     def focus_set(self):
         self.game.focus_set()          # клавиши ловит игровой Frame
 
-    def _open_settings(self):
-        open_settings(self.app.themes, self.app.root)
+    def on_hide(self):
+        self.game.suspend()            # показ решения не должен идти, пока открыты настройки
 
+    def on_show(self):
+        self.game.resume()
+
+    def _open_settings(self):
+        self.app.open_settings()
 
 def play_library_level(app, name, back):
     """Загружает уровень из библиотеки и открывает игру.

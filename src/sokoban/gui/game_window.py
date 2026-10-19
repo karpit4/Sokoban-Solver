@@ -45,6 +45,7 @@ class GameFrame(tk.Frame):
         self.playback = SolutionPlayback(self.session, self._solution) if solution else None
         self._playing = self.playback is not None
         self._paused = False
+        self._auto_paused = False 
         self._timer = None             # id отложенного шага показа
         self._speed = DEFAULT_SPEED
         self.styler = Styler()
@@ -102,7 +103,7 @@ class GameFrame(tk.Frame):
     def _button(self, parent, text, command, width=14):
         def run():
             command()
-            if self.winfo_exists():      # «Выйти» уже закрыло окно
+            if self.winfo_exists() and self.winfo_viewable():      # «Выйти» уже закрыло окно
                 self.focus_set()
         btn = tk.Button(parent, text=text, command=run, width=width, relief="flat", pady=4)
         return self.styler.add(btn, "button")
@@ -163,6 +164,20 @@ class GameFrame(tk.Frame):
             self._paused = True
             self._cancel_timer()
             self.pause_btn.config(text="Продолжить")
+
+    def suspend(self):
+        """Экран спрятали (например, открыли настройки): идущий показ решения встаёт на паузу."""
+        self._auto_paused = self._playing and not self._paused
+        if self._auto_paused:
+            self._toggle_pause()
+
+    def resume(self):
+        """Экран вернули: показ, который поставили на паузу при скрытии, продолжается.
+        Если игрок сам остановил показ, он остаётся остановленным."""
+        if self._auto_paused:
+            self._auto_paused = False
+            if self._playing and self._paused:
+                self._toggle_pause()
 
     def _end_playback(self):
         """Показ закончился или игрок взял управление: дальше обычная игра с текущего места."""

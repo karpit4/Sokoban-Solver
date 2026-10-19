@@ -72,10 +72,11 @@ class EditorFrame(tk.Frame):
     только пока уровень корректен.
     on_cancel(): по «Отмена» (если есть несохранённые изменения, после вопроса)."""
 
-    def __init__(self, master, matrix, themes, on_done, on_cancel):
+    def __init__(self, master, matrix, themes, on_done, on_cancel, on_settings = None):
         super().__init__(master, padx=12, pady=12)
         self.themes = themes
         self.theme = themes.theme
+        self._on_settings = on_settings
         self.on_done = on_done
         self.on_cancel = on_cancel
         self._undo = []          # снимки матрицы до каждого действия
@@ -163,7 +164,7 @@ class EditorFrame(tk.Frame):
     def _button(self, parent, text, command, width):
         def run():
             command()
-            if self.winfo_exists():      # «Готово» и «Отмена» уже могли убрать экран
+            if self.winfo_exists() and self.winfo_viewable():      # «Готово» и «Отмена» уже могли убрать экран
                 self.focus_set()
         btn = tk.Button(parent, text=text, command=run, width=width,
                         relief="flat", pady=4)
@@ -179,8 +180,10 @@ class EditorFrame(tk.Frame):
         return photo
 
     def _open_settings(self):
-        open_settings(self.themes, self.winfo_toplevel())
-
+        if self._on_settings is not None:
+            self._on_settings()
+        else:
+            open_settings(self.themes, self.winfo_toplevel())
     def _on_theme_change(self, theme):
         """Перекрашивает окно, обновляет значки палитры и перерисовывает поле.
         Нарисованное и стек отмены не затрагиваются."""

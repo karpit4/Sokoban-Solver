@@ -1,6 +1,5 @@
 from gui.screens.base import Screen
 from gui.screens.play_menu import PlayMenuScreen
-from gui.screens.settings_screen import SettingsScreen
 from gui.screens.solve_menu import SolveMenuScreen
 
 
@@ -28,4 +27,4 @@ class MenuScreen(Screen):
         self.app.show(SolveMenuScreen, self._back)
 
     def _settings(self):
-        self.app.show(SettingsScreen, self._back)
+        self.app.open_settings()

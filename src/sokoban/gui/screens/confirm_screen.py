@@ -3,7 +3,6 @@ import tkinter as tk
 from gui.board_view import BoardView
 from gui.screens.editor_screen import EditorScreen
 from gui.screens.base import Screen
-from gui.settings import open_settings
 from levels.validation import validate
 
 
@@ -108,8 +107,7 @@ class ConfirmScreen(Screen):
         self.app.show(EditorScreen, matrix, on_done=resume, on_cancel=resume)
         
     def _open_settings(self):
-        open_settings(self.app.themes, self.app.root)
-        self.focus_set()
+        self.app.open_settings()
 
     def _cancel(self):
         self.on_cancel()
