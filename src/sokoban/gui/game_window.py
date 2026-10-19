@@ -22,6 +22,7 @@ DEFAULT_SPEED = 2                  # индекс в SPEEDS
 START_DELAY = 500                  # пауза перед первым ходом показа, мс
 
 HINT = "Стрелки/WASD: ход    Клик: перейти    Z: отмена    R: заново"
+REPLAY_HINT = "Стрелки/WASD: ход    Клик: перейти    Z: отмена    R: повторить показ"
 PLAYING_HINT = "Идёт показ решения: ходы выполняются автоматически"
 
 
@@ -31,7 +32,8 @@ class GameFrame(tk.Frame):
     on_exit(won, moves) вызывается, когда игрок нажал «Выйти»:
     won - пройден ли уровень, moves - сделанные ходы.
     solution: список ходов солвера. Если он задан, решение проигрывается автоматически
-    (ходы применяются напрямую, фокус окна для этого не нужен)."""
+    (ходы применяются напрямую, фокус окна для этого не нужен), а кнопка «Заново»
+    превращается в «Повторить показ» и всегда проигрывает решение снова."""
 
     def __init__(self, master, matrix, name, themes, on_exit, solution=None, on_settings = None):
         super().__init__(master, padx=12, pady=12)
@@ -39,7 +41,8 @@ class GameFrame(tk.Frame):
         self.theme = themes.theme
         self.on_exit = on_exit
         self.session = GameSession(matrix)
-        self.playback = SolutionPlayback(self.session, solution) if solution else None
+        self._solution = list(solution) if solution else None     # нужен для повторного показа
+        self.playback = SolutionPlayback(self.session, self._solution) if solution else None
         self._playing = self.playback is not None
         self._paused = False
         self._timer = None             # id отложенного шага показа
@@ -63,17 +66,22 @@ class GameFrame(tk.Frame):
 
         buttons = self._frame(self)
         buttons.pack()
+        self._buttons = buttons        # строка показа возвращается именно перед ней
         self.undo_btn = self._button(buttons, "Отменить (Z)", self._undo)
-        self.restart_btn = self._button(buttons, "Заново (R)", self._restart)
+        if self._solution is not None:
+            # с решением эта кнопка всегда проигрывает его заново, а не возвращает к началу
+            self.restart_btn = self._button(buttons, "Повторить показ (R)", self._restart, width=19)
+        else:
+            self.restart_btn = self._button(buttons, "Заново (R)", self._restart)
         settings_btn = self._button(buttons, "Настройки", on_settings) if on_settings else None
         self.exit_btn = self._button(buttons, "Выйти", self.close)
         for btn in (self.undo_btn, self.restart_btn, settings_btn, self.exit_btn):
             if btn is not None:
                 btn.pack(side="left", padx=4)
-        
+
         self.styler.apply(self.theme)
         self.themes.subscribe(self, self._on_theme_change)
-            
+
         # Клавиши ловит сам Frame, поэтому после каждого нажатия кнопки фокус возвращается ему
         self.bind("<Key>", self._on_key)
         self.bind("<Destroy>", self._on_destroy, add="+")   # add="+": иначе пропадёт отписка от темы
@@ -104,6 +112,7 @@ class GameFrame(tk.Frame):
         self.styler.apply(theme)
         self.board.set_theme(theme)  # перерисовывает текущее положение, а не начальное
         self._update_status()
+
     # ---------- показ решения ----------
 
     def _build_playback_row(self):
@@ -163,6 +172,16 @@ class GameFrame(tk.Frame):
         self.playback_row.pack_forget()
         self._update_status()
 
+    def _start_playback(self):
+        """Запускает показ решения с начала (скорость остаётся выбранной)."""
+        self.playback = SolutionPlayback(self.session, self._solution)
+        self._playing = True
+        self._paused = False
+        self.pause_btn.config(text="Пауза")
+        self.playback_row.pack(pady=(0, 8), before=self._buttons)   # на прежнее место, над кнопками
+        self._update_status()
+        self._schedule(START_DELAY)
+
     def _on_destroy(self, event):
         # отложенный шаг не должен сработать после закрытия окна
         if event.widget is self:
@@ -186,12 +205,18 @@ class GameFrame(tk.Frame):
         else:
             text = f"Ходов: {n}"
         self.status_label.config(text=text)
-        self.hint_label.config(text=PLAYING_HINT if self._playing else HINT)
+        if self._playing:
+            hint = PLAYING_HINT
+        else:
+            hint = HINT if self._solution is None else REPLAY_HINT
+        self.hint_label.config(text=hint)
         # во время показа отмена и перезапуск недоступны: они сбили бы решение
-        enabled = self.session.can_undo and not self._playing
-        state = "normal" if enabled else "disabled"
-        self.undo_btn.config(state=state)
-        self.restart_btn.config(state=state)
+        can_undo = self.session.can_undo and not self._playing
+        # повторить показ можно в любой момент после его конца или после «Взять управление»,
+        # даже из начальной позиции; обычное «Заново» нужно, только если есть что сбрасывать
+        can_restart = (not self._playing) if self._solution is not None else can_undo
+        self.undo_btn.config(state="normal" if can_undo else "disabled")
+        self.restart_btn.config(state="normal" if can_restart else "disabled")
 
     def _on_key(self, event):
         if self._playing:
@@ -217,12 +242,17 @@ class GameFrame(tk.Frame):
         self._apply(self.session.undo())
 
     def _restart(self):
+        """Без решения: уровень с начала. С решением: показ решения заново."""
+        replay = self._solution is not None
         if self.session.can_undo and not self.session.is_won:
-            if not messagebox.askyesno("Заново", "Начать уровень сначала? Ходы будут потеряны.",
-                                       parent=self):
+            question = ("Показать решение заново? Текущие ходы будут потеряны." if replay
+                        else "Начать уровень сначала? Ходы будут потеряны.")
+            if not messagebox.askyesno("Заново", question, parent=self):
                 self.focus_set()
                 return
         self._apply(self.session.restart())
+        if replay:
+            self._start_playback()
 
     def close(self):
         self.on_exit(self.session.is_won, self.session.moves)
