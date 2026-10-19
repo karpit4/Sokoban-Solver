@@ -1,5 +1,5 @@
 from tkinter import messagebox
-from gui.editor_window import edit_level
+from gui.screens.editor_screen import EditorScreen
 from gui.screens.base import Screen
 from gui.screens.game import GameScreen, play_library_level
 from gui.screens.pick_level import PickLevelScreen
@@ -30,12 +30,12 @@ class PlayMenuScreen(Screen):
 
     def _own_level(self):
         """Конструктор, затем игра. Конструктор не даёт закончить некорректный уровень,
-        поэтому отдельное подтверждение не нужно. Пока конструктор отдельное блокирующее окно,
-        он вызывается прямо отсюда."""
-        level = edit_level(parent=self.app.root, themes=self.app.themes)
-        if level is not None:
-            self.app.show(GameScreen, level, "свой уровень", self._return_here)
-            
+        поэтому отдельное подтверждение не нужно."""
+        self.app.show(EditorScreen, None, on_done=self._play_own, on_cancel=self._return_here)
+
+    def _play_own(self, level):
+        self.app.show(GameScreen, level, "свой уровень", self._return_here)
+           
     def _random_level(self):
         name = library.random_name()
         if name is None:

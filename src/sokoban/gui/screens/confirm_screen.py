@@ -1,7 +1,7 @@
 import tkinter as tk
 
 from gui.board_view import BoardView
-from gui.editor_window import edit_level
+from gui.screens.editor_screen import EditorScreen
 from gui.screens.base import Screen
 from gui.settings import open_settings
 from levels.validation import validate
@@ -12,13 +12,13 @@ class ConfirmScreen(Screen):
     on_done(levels) вызывается после последнего уровня со списком подтверждённых (может быть пустым),
     on_cancel() по кнопке «Отмена»: тогда ни один уровень дальше не идёт."""
 
-    def __init__(self, master, app, levels, on_done, on_cancel):
+    def __init__(self, master, app, levels, on_done, on_cancel, index=0, result=None):
         super().__init__(master, app)
         self.levels = [(name, [list(row) for row in matrix]) for name, matrix in levels]
         self.on_done = on_done
         self.on_cancel = on_cancel
-        self.index = 0
-        self.result = []
+        self.index = index
+        self.result = result if result is not None else []
         self.configure(padx=24, pady=20)
 
         self.title_label = self.label(self, font=("Segoe UI", 12, "bold"))
@@ -94,13 +94,19 @@ class ConfirmScreen(Screen):
         self._next()
 
     def _edit(self):
+        """Открывает конструктор с этим уровнем и возвращается на то же место
+        с исправленным уровнем («Готово») или без изменений («Отмена»)."""
         name, matrix = self.levels[self.index]
-        new_matrix = edit_level(matrix, self.app.root, self.app.themes)
-        if new_matrix is not None:
-            self.levels[self.index] = (name, new_matrix)
-        self._show_level()
-        self.focus_set()               # после окна редактора клавиши снова идут сюда
+        levels, index, result = self.levels, self.index, self.result
+        on_done, on_cancel = self.on_done, self.on_cancel
 
+        def resume(new_matrix=None):
+            if new_matrix is not None:
+                levels[index] = (name, new_matrix)
+            self.app.show(ConfirmScreen, levels, on_done, on_cancel, index, result)
+
+        self.app.show(EditorScreen, matrix, on_done=resume, on_cancel=resume)
+        
     def _open_settings(self):
         open_settings(self.app.themes, self.app.root)
         self.focus_set()

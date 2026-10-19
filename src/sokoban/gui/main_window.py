@@ -6,6 +6,7 @@ from gui.styling import Styler
 from gui.theme import ThemeManager
 
 MIN_WIDTH, MIN_HEIGHT = 520, 380
+TASKBAR = 80
 
 
 class App:
@@ -40,11 +41,24 @@ class App:
         screen.pack(fill="both", expand=True)
         screen.focus_set()
         self.screen = screen
+        self._keep_on_screen()
 
     def run(self):
         self.show(MenuScreen)
         self._center()
         self.root.mainloop()
+
+    def _keep_on_screen(self):
+        """Окно подстраивается под экран и растёт вправо и вниз от своего места.
+        Большой экран (конструктор) мог бы уйти за край, поэтому окно сдвигается."""
+        self.root.update_idletasks()
+        w = max(self.root.winfo_reqwidth(), MIN_WIDTH)
+        h = max(self.root.winfo_reqheight(), MIN_HEIGHT)
+        x, y = self.root.winfo_x(), self.root.winfo_y()
+        new_x = max(0, min(x, self.root.winfo_screenwidth() - w))
+        new_y = max(0, min(y, self.root.winfo_screenheight() - h - TASKBAR))
+        if (new_x, new_y) != (x, y):
+            self.root.geometry(f"+{new_x}+{new_y}")
 
     def _center(self):
         """Ставит окно по центру экрана по горизонтали и выше центра по вертикали.

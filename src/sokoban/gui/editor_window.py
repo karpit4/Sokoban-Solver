@@ -2,14 +2,14 @@ import os
 import tkinter as tk
 from tkinter import filedialog, messagebox
 
-from gui.app import get_root
-from gui.theme import ThemeManager
+from gui.app import bring_to_front, get_root
 from gui.board_view import BoardView
-from gui.styling import Styler
-from levels.validation import validate
-from levels.level_io import trim, save_txt
-from paths import LEVELS_DIR, PROJECT_DIR
 from gui.settings import open_settings
+from gui.styling import Styler
+from gui.theme import ThemeManager
+from levels.level_io import trim, save_txt
+from levels.validation import validate
+from paths import LEVELS_DIR, PROJECT_DIR
 
 DEFAULT_SIZE = 16
 MIN_SIZE = 3
@@ -64,52 +64,50 @@ def _cells_between(a, b):
             for k in range(1, n + 1)]
 
 
-class EditorWindow:
+class EditorFrame(tk.Frame):
+    """Конструктор уровня в виде Frame: его можно поместить и в экран главного окна
+    (EditorScreen), и в отдельное окно (edit_level).
+    matrix: уровень для правки или None (новый уровень, сетка 16×16).
+    on_done(level): по «Готово»; level это матрица без пустых краёв. Кнопка доступна,
+    только пока уровень корректен.
+    on_cancel(): по «Отмена» (если есть несохранённые изменения, после вопроса)."""
 
-    def __init__(self, matrix, parent, themes):
+    def __init__(self, master, matrix, themes, on_done, on_cancel):
+        super().__init__(master, padx=12, pady=12)
         self.themes = themes
         self.theme = themes.theme
-        self.result = None
-        self._original = None    # задаётся ниже, после создания поля
+        self.on_done = on_done
+        self.on_cancel = on_cancel
         self._undo = []          # снимки матрицы до каждого действия
         self._before = None      # снимок на начало текущего мазка
         self._last_cell = None
         self._icons = {}         # ссылки на значки палитры
         self._tool_buttons = []  # (кнопка палитры, символ значка)
         self.styler = Styler()
-
-        self.win = tk.Toplevel(get_root() if parent is None else parent)
-        if parent is not None:
-            self.win.transient(parent)
-        self.win.title("Конструктор уровня")
-        self.win.configure(padx=12, pady=12)
-        self.styler.add(self.win, "bg")
-        self.win.resizable(False, False)
-        self.win.protocol("WM_DELETE_WINDOW", self._cancel)
+        self.styler.add(self, "bg")
 
         # палитра
         self.tool = tk.StringVar(value="wall")
-        toolbar = self._frame(self.win)
+        toolbar = self._frame(self)
         toolbar.pack(pady=(0, 8))
         for tool_id, text, symbol, key in TOOLS:
             rb = tk.Radiobutton(
                 toolbar, text=f" {key}  {text}", value=tool_id, variable=self.tool,
                 image=self._icon(symbol), compound="left", indicatoron=False,
-                relief="flat", padx=8, pady=4)
+                relief="flat", padx=8, pady=4, command=lambda: self.focus_set())
             rb.pack(side="left", padx=2)
             self.styler.add(rb, "tool")
             self._tool_buttons.append((rb, symbol))
-            self.win.bind(f"<Key-{key}>", lambda e, t=tool_id: self.tool.set(t))
+            self.bind(f"<Key-{key}>", lambda e, t=tool_id: self.tool.set(t))
 
         # поле
-        self.board = BoardView(self.win, self.theme)
+        self.board = BoardView(self, self.theme)
         self.board.pack()
         self.board.set_matrix(self._initial_matrix(matrix))
         self._start = self.board.get_matrix()
-        self._original = trim(self._start) if matrix else None
 
         # размер: для каждой стороны пара кнопок + и −
-        size_row = self._frame(self.win)
+        size_row = self._frame(self)
         size_row.pack(pady=(8, 0))
         for side, title in (("top", "Сверху"), ("bottom", "Снизу"),
                             ("left", "Слева"), ("right", "Справа")):
@@ -121,22 +119,21 @@ class EditorWindow:
             self._button(pair, "+", lambda s=side: self._resize(s, 1), width=4).pack(side="left", padx=1)
             self._button(pair, "−", lambda s=side: self._resize(s, -1), width=4).pack(side="left", padx=1)
 
-        self.size_label = self._label(self.win, font=("Segoe UI", 9))
+        self.size_label = self._label(self, font=("Segoe UI", 9))
         self.size_label.pack(pady=(6, 0))
         self.status_label = self.styler.add(
-            tk.Label(self.win, justify="left", anchor="w", wraplength=560, height=2,
+            tk.Label(self, justify="left", anchor="w", wraplength=560, height=2,
                      font=("Segoe UI", 10)), "bg")      # цвет текста задаёт _refresh
         self.status_label.pack(fill="x", pady=4)
 
         # нижние кнопки
-        bottom = self._frame(self.win)
+        bottom = self._frame(self)
         bottom.pack(pady=(4, 0))
         self._button(bottom, "Отменить (Ctrl+Z)", self._undo_step, width=18).pack(side="left", padx=3)
         self._button(bottom, "Сохранить в .txt…", self._save, width=18).pack(side="left", padx=3)
         self.done_btn = self._button(bottom, "Готово", self._done, width=12)
         self.done_btn.pack(side="left", padx=3)
-        self._button(bottom, "Отмена", self._cancel, width=12).pack(side="left", padx=3)
-        
+        self._button(bottom, "Отмена", self.cancel, width=12).pack(side="left", padx=3)
         self._button(bottom, "Настройки", self._open_settings, width=12).pack(side="left", padx=3)
 
         # мышь: левая кнопка рисует выбранным инструментом, правая ставит пол
@@ -147,13 +144,13 @@ class EditorWindow:
         c.bind("<Button-3>", lambda e: self._press(e, "floor"))
         c.bind("<B3-Motion>", lambda e: self._drag(e, "floor"))
         c.bind("<ButtonRelease-3>", self._release)
-        self.win.bind("<Control-KeyPress>", self._on_ctrl)
+        # Клавиши ловит сам Frame, поэтому после кнопок и мыши фокус возвращается ему
+        self.bind("<Control-KeyPress>", self._on_ctrl)
 
         self.styler.apply(self.theme)
-        self.themes.subscribe(self.win, self._on_theme_change)
+        self.themes.subscribe(self, self._on_theme_change)
 
         self._refresh()
-        self._bring_to_front()
 
     # ---------- оформление ----------
 
@@ -164,7 +161,11 @@ class EditorWindow:
         return self.styler.add(tk.Label(parent, **options), "label")
 
     def _button(self, parent, text, command, width):
-        btn = tk.Button(parent, text=text, command=command, width=width,
+        def run():
+            command()
+            if self.winfo_exists():      # «Готово» и «Отмена» уже могли убрать экран
+                self.focus_set()
+        btn = tk.Button(parent, text=text, command=run, width=width,
                         relief="flat", pady=4)
         return self.styler.add(btn, "button")
 
@@ -172,14 +173,14 @@ class EditorWindow:
         """Значок палитры: текстура темы или, если её нет, цветной квадрат."""
         photo = self.theme.get_image(symbol, ICON_SIZE)
         if photo is None:
-            photo = tk.PhotoImage(master=self.win, width=ICON_SIZE, height=ICON_SIZE)
+            photo = tk.PhotoImage(master=self, width=ICON_SIZE, height=ICON_SIZE)
             photo.put(self.theme.get_color(symbol), to=(0, 0, ICON_SIZE, ICON_SIZE))
         self._icons[symbol] = photo
         return photo
 
     def _open_settings(self):
-        open_settings(self.themes, self.win)
-    
+        open_settings(self.themes, self.winfo_toplevel())
+
     def _on_theme_change(self, theme):
         """Перекрашивает окно, обновляет значки палитры и перерисовывает поле.
         Нарисованное и стек отмены не затрагиваются."""
@@ -189,17 +190,6 @@ class EditorWindow:
             rb.configure(image=self._icon(symbol))
         self.board.set_theme(theme)
         self._refresh()
-
-    def _bring_to_front(self):
-        self.win.update_idletasks()
-        w, h = self.win.winfo_reqwidth(), self.win.winfo_reqheight()
-        x = (self.win.winfo_screenwidth() - w) // 2
-        y = (self.win.winfo_screenheight() - h) // 3
-        self.win.geometry(f"+{x}+{y}")
-        self.win.attributes("-topmost", True)
-        self.win.after(200, lambda: self.win.attributes("-topmost", False))
-        self.win.focus_force()
-        self.win.grab_set()
 
     # ---------- начальная матрица ----------
 
@@ -217,6 +207,7 @@ class EditorWindow:
     # ---------- рисование ----------
 
     def _press(self, event, tool):
+        self.focus_set()
         self._before = self.board.get_matrix()
         self._last_cell = None
         self._paint(event, tool)
@@ -310,7 +301,6 @@ class EditorWindow:
                                      fg=ui["error_outline"])
         else:
             self.status_label.config(text="Ошибок не найдено", fg=ui["button_fg"])
-
         # «Готово» доступно, только если уровень корректен; сохранить черновик можно всегда
         self.done_btn.config(state="disabled" if issues else "normal")
 
@@ -319,43 +309,57 @@ class EditorWindow:
     def _save(self):
         initial = LEVELS_DIR if os.path.isdir(LEVELS_DIR) else PROJECT_DIR
         path = filedialog.asksaveasfilename(
-            parent=self.win, title="Сохранить уровень", initialdir=initial,
+            parent=self, title="Сохранить уровень", initialdir=initial,
             defaultextension=".txt", filetypes=[("Текстовые файлы", "*.txt")])
         if not path:
             return
         try:
             save_txt(path, self.board.matrix)
         except (ValueError, OSError) as e:
-            messagebox.showerror("Не удалось сохранить", str(e), parent=self.win)
+            messagebox.showerror("Не удалось сохранить", str(e), parent=self)
             return
-        messagebox.showinfo("Сохранено", path, parent=self.win)
+        messagebox.showinfo("Сохранено", path, parent=self)
 
     def _done(self):
-        level = trim(self.board.matrix)
-        if not level:
-            messagebox.showwarning("Пустое поле", "Нарисуйте уровень или нажмите «Отмена».",
-                                   parent=self.win)
+        if validate(self.board.matrix):   # кнопка и так отключена; защита на всякий случай
             return
-        # None означает «без изменений» (так и ждёт confirm_window)
-        self.result = None if level == self._original else level
-        self.win.destroy()
+        self.on_done(trim(self.board.matrix))
 
-    def _cancel(self):
+    def cancel(self):
         if self.board.matrix != self._start and not messagebox.askyesno(
-                "Закрыть конструктор", "Изменения не будут сохранены. Закрыть?", parent=self.win):
+                "Закрыть конструктор", "Изменения не будут сохранены. Закрыть?", parent=self):
+            self.focus_set()
             return
-        self.result = None
-        self.win.destroy()
+        self.on_cancel()
 
 
 def edit_level(matrix=None, parent=None, themes=None):
-    """Открывает редактор. matrix=None: новый уровень с нуля (сетка 16×16).
+    """Открывает конструктор в отдельном окне и ждёт, пока его закроют (консольный режим).
+    matrix=None: новый уровень с нуля (сетка 16×16).
     themes: ThemeManager (если не передать, создаётся новый).
-    Возвращает матрицу без пустых краёв или None (отмена или нет изменений).
+    Возвращает матрицу без пустых краёв или None (отмена).
     Подходит как edit_callback для confirm_levels."""
-    get_root()                 # корень должен существовать до создания окна
+    get_root()                     # корень должен существовать до создания окна
     if themes is None:
         themes = ThemeManager()
-    window = EditorWindow(matrix, parent, themes)
-    window.win.wait_window()
-    return window.result
+
+    win = tk.Toplevel(get_root() if parent is None else parent)
+    if parent is not None:
+        win.transient(parent)
+    win.title("Конструктор уровня")
+    win.resizable(False, False)
+
+    result = {"level": None}
+
+    def done(level):
+        result["level"] = level
+        win.destroy()
+
+    frame = EditorFrame(win, matrix, themes, done, win.destroy)
+    frame.pack()
+    win.protocol("WM_DELETE_WINDOW", frame.cancel)
+    bring_to_front(win)
+    frame.focus_set()              # после focus_force окна: клавиши идут во Frame
+    win.wait_window()
+    get_root().update()            # окно должно исчезнуть до следующих действий
+    return result["level"]

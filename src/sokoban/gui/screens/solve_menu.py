@@ -1,7 +1,7 @@
 import os
 from tkinter import filedialog, messagebox
 
-from gui.editor_window import edit_level
+from gui.screens.editor_screen import EditorScreen
 from gui.screens.base import Screen
 from gui.screens.confirm_screen import ConfirmScreen
 from gui.screens.solve_screen import SolveScreen
@@ -77,6 +77,7 @@ class SolveMenuScreen(Screen):
 
     def _from_editor(self):
         """Конструктор не даёт закончить некорректный уровень, поэтому подтверждение не нужно."""
-        level = edit_level(parent=self.app.root, themes=self.app.themes)
-        if level is not None:
-            self.app.show(SolveScreen, [("свой уровень", level)], self._return_here)
+        self.app.show(EditorScreen, None, on_done=self._solve_own, on_cancel=self._return_here)
+
+    def _solve_own(self, level):
+        self.app.show(SolveScreen, [("свой уровень", level)], self._return_here)
