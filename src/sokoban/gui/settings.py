@@ -1,15 +1,13 @@
 import tkinter as tk
 
-from gui.app import bring_to_front, get_root
 from gui.styling import Styler
 
 
 class SettingsFrame(tk.Frame):
     """Содержимое настроек. Сейчас здесь только смена темы; новые настройки добавляются сюда
-    и сразу появляются и на экране главного окна, и в окне настроек из игры и конструктора.
-    on_close: если задан, внизу появляется кнопка «Закрыть»."""
+    и сразу появляются на экране настроек."""
 
-    def __init__(self, master, themes, on_close=None):
+    def __init__(self, master, themes):
         super().__init__(master, padx=24, pady=20)
         self.themes = themes
         self.styler = Styler()
@@ -27,9 +25,6 @@ class SettingsFrame(tk.Frame):
         if len(self.themes.names()) < 2:
             self.prev_btn.config(state="disabled")
             self.next_btn.config(state="disabled")
-
-        if on_close is not None:
-            self._button(self, "Закрыть", on_close, width=14).pack(pady=(18, 0))
 
         self.styler.apply(self.themes.theme)
         self._update_label()
@@ -51,20 +46,3 @@ class SettingsFrame(tk.Frame):
     def _on_theme_change(self, theme):
         self.styler.apply(theme)
         self._update_label()
-
-
-def open_settings(themes, parent=None):
-    """Окно настроек поверх parent (по умолчанию главное окно).
-    Блокирует вызывающее окно, пока не закрыто, и возвращает ему захват ввода."""
-    parent = parent or get_root()
-    previous = parent.grab_current()       # окно, которое сейчас держит захват ввода
-    win = tk.Toplevel(parent)
-    win.title("Настройки")
-    win.transient(parent)
-    win.resizable(False, False)
-    SettingsFrame(win, themes, on_close=win.destroy).pack()
-    win.bind("<Escape>", lambda e: win.destroy())
-    bring_to_front(win)
-    win.wait_window()
-    if previous is not None and previous.winfo_exists():
-        previous.grab_set()

@@ -5,11 +5,8 @@ from core.playback import SolutionPlayback
 from core.rules import DIRECTIONS
 from core.session import GameSession
 from core.state import symbol_at
-from gui.app import bring_to_front, get_root
 from gui.board_view import BoardView
 from gui.styling import Styler
-from gui.settings import open_settings
-from gui.theme import ThemeManager
 
 # Стрелки приходят как keysym ("Up", "Down", "Left", "Right": те же имена, что в DIRECTIONS).
 # Буквы определяются по коду клавиши, чтобы работали в любой раскладке (коды Windows).
@@ -35,7 +32,7 @@ class GameFrame(tk.Frame):
     (ходы применяются напрямую, фокус окна для этого не нужен), а кнопка «Заново»
     превращается в «Повторить показ» и всегда проигрывает решение снова."""
 
-    def __init__(self, master, matrix, name, themes, on_exit, solution=None, on_settings = None):
+    def __init__(self, master, matrix, name, themes, on_exit, on_settings, solution=None):
         super().__init__(master, padx=12, pady=12)
         self.themes = themes
         self.theme = themes.theme
@@ -74,11 +71,10 @@ class GameFrame(tk.Frame):
             self.restart_btn = self._button(buttons, "Повторить показ (R)", self._restart, width=19)
         else:
             self.restart_btn = self._button(buttons, "Заново (R)", self._restart)
-        settings_btn = self._button(buttons, "Настройки", on_settings) if on_settings else None
+        settings_btn = self._button(buttons, "Настройки", on_settings)
         self.exit_btn = self._button(buttons, "Выйти", self.close)
         for btn in (self.undo_btn, self.restart_btn, settings_btn, self.exit_btn):
-            if btn is not None:
-                btn.pack(side="left", padx=4)
+            btn.pack(side="left", padx=4)
 
         self.styler.apply(self.theme)
         self.themes.subscribe(self, self._on_theme_change)
@@ -271,34 +267,3 @@ class GameFrame(tk.Frame):
 
     def close(self):
         self.on_exit(self.session.is_won, self.session.moves)
-
-
-def play_level(matrix, name="", parent=None, themes=None, solution=None):
-    """Открывает окно игры и ждёт, пока игрок его закроет.
-    solution: список ходов солвера для автоматического показа (необязательно).
-    Возвращает (won, moves): пройден ли уровень и список сделанных ходов."""
-    get_root()                     # корень должен существовать до создания окна
-    if themes is None:
-        themes = ThemeManager()
-
-    win = tk.Toplevel(get_root() if parent is None else parent)
-    if parent is not None:
-        win.transient(parent)
-    win.title("Игра")
-    win.resizable(False, False)
-
-    result = {"won": False, "moves": []}
-
-    def finish(won, moves):
-        result["won"], result["moves"] = won, moves
-        win.destroy()
-
-    frame = GameFrame(win, matrix, name, themes, finish, solution,
-                      on_settings=lambda: open_settings(themes, win))
-    frame.pack()
-    win.protocol("WM_DELETE_WINDOW", frame.close)
-    bring_to_front(win)
-    frame.focus_set()              # после focus_force окна: клавиши идут во Frame
-    win.wait_window()
-    get_root().update()            # окно должно исчезнуть до следующих действий
-    return result["won"], result["moves"]

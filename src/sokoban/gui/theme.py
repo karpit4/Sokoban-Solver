@@ -162,10 +162,6 @@ class Theme:
     def get_color(self, symbol):
         return self.colors[SYMBOL_TO_NAME.get(symbol, "unknown")]
 
-    def clear_cache(self):
-        """Вызывать при смене размера клетки, чтобы не копить старые картинки."""
-        self._cache.clear()
-        self._floor_cache.clear()
         
 class ThemeManager:
     """Единственное место, где хранится текущая тема.
@@ -185,15 +181,6 @@ class ThemeManager:
 
     def names(self):
         return list_themes()
-
-    def set(self, name):
-        """Выбрать тему по названию и сообщить об этом окнам."""
-        if name not in self.names():
-            raise ValueError(f"Нет темы {name!r}")
-        if name == self.name:
-            return
-        self.name = name
-        self._notify()
 
     def cycle(self, step=1):
         """Соседняя тема по кругу: step=1 следующая, step=-1 предыдущая."""

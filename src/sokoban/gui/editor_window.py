@@ -2,11 +2,8 @@ import os
 import tkinter as tk
 from tkinter import filedialog, messagebox
 
-from gui.app import bring_to_front, get_root
 from gui.board_view import BoardView
-from gui.settings import open_settings
 from gui.styling import Styler
-from gui.theme import ThemeManager
 from levels.level_io import trim, save_txt
 from levels.validation import validate
 from paths import LEVELS_DIR, PROJECT_DIR
@@ -65,18 +62,17 @@ def _cells_between(a, b):
 
 
 class EditorFrame(tk.Frame):
-    """Конструктор уровня в виде Frame: его можно поместить и в экран главного окна
-    (EditorScreen), и в отдельное окно (edit_level).
+    """Конструктор уровня в виде Frame: его показывает экран EditorScreen.
     matrix: уровень для правки или None (новый уровень, сетка 16×16).
     on_done(level): по «Готово»; level это матрица без пустых краёв. Кнопка доступна,
     только пока уровень корректен.
-    on_cancel(): по «Отмена» (если есть несохранённые изменения, после вопроса)."""
+    on_cancel(): по «Отмена» (если есть несохранённые изменения, после вопроса).
+    on_settings(): по «Настройки»."""
 
-    def __init__(self, master, matrix, themes, on_done, on_cancel, on_settings = None):
+    def __init__(self, master, matrix, themes, on_done, on_cancel, on_settings):
         super().__init__(master, padx=12, pady=12)
         self.themes = themes
         self.theme = themes.theme
-        self._on_settings = on_settings
         self.on_done = on_done
         self.on_cancel = on_cancel
         self._undo = []          # снимки матрицы до каждого действия
@@ -135,8 +131,8 @@ class EditorFrame(tk.Frame):
         self.done_btn = self._button(bottom, "Готово", self._done, width=12)
         self.done_btn.pack(side="left", padx=3)
         self._button(bottom, "Отмена", self.cancel, width=12).pack(side="left", padx=3)
-        self._button(bottom, "Настройки", self._open_settings, width=12).pack(side="left", padx=3)
-
+        self._button(bottom, "Настройки", on_settings, width=12).pack(side="left", padx=3)
+        
         # мышь: левая кнопка рисует выбранным инструментом, правая ставит пол
         c = self.board.canvas
         c.bind("<Button-1>", lambda e: self._press(e, None))
@@ -179,11 +175,6 @@ class EditorFrame(tk.Frame):
         self._icons[symbol] = photo
         return photo
 
-    def _open_settings(self):
-        if self._on_settings is not None:
-            self._on_settings()
-        else:
-            open_settings(self.themes, self.winfo_toplevel())
     def _on_theme_change(self, theme):
         """Перекрашивает окно, обновляет значки палитры и перерисовывает поле.
         Нарисованное и стек отмены не затрагиваются."""
@@ -334,35 +325,3 @@ class EditorFrame(tk.Frame):
             self.focus_set()
             return
         self.on_cancel()
-
-
-def edit_level(matrix=None, parent=None, themes=None):
-    """Открывает конструктор в отдельном окне и ждёт, пока его закроют (консольный режим).
-    matrix=None: новый уровень с нуля (сетка 16×16).
-    themes: ThemeManager (если не передать, создаётся новый).
-    Возвращает матрицу без пустых краёв или None (отмена).
-    Подходит как edit_callback для confirm_levels."""
-    get_root()                     # корень должен существовать до создания окна
-    if themes is None:
-        themes = ThemeManager()
-
-    win = tk.Toplevel(get_root() if parent is None else parent)
-    if parent is not None:
-        win.transient(parent)
-    win.title("Конструктор уровня")
-    win.resizable(False, False)
-
-    result = {"level": None}
-
-    def done(level):
-        result["level"] = level
-        win.destroy()
-
-    frame = EditorFrame(win, matrix, themes, done, win.destroy)
-    frame.pack()
-    win.protocol("WM_DELETE_WINDOW", frame.cancel)
-    bring_to_front(win)
-    frame.focus_set()              # после focus_force окна: клавиши идут во Frame
-    win.wait_window()
-    get_root().update()            # окно должно исчезнуть до следующих действий
-    return result["level"]

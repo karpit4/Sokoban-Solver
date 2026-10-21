@@ -13,8 +13,7 @@ ERROR = "error"
 
 
 def _worker(level, conn):
-    """Выполняется в дочернем процессе: решает уровень и отправляет результат."""
-    # Ctrl+C в консоли отменяет родитель; поиск сам по себе прерывать не должен
+    # Ctrl+C в терминале, из которого запущена программа, не должен ломать поиск: процесс завершает родитель    # Ctrl+C в консоли отменяет родитель; поиск сам по себе прерывать не должен
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     try:
         start = time.perf_counter()
@@ -48,10 +47,6 @@ class SolveJob:
         self._proc = mp.Process(target=_worker, args=(level, send), daemon=True)
         self._proc.start()
         send.close()                         # в родителе конец для записи не нужен
-
-    @property
-    def running(self):
-        return self.status == RUNNING
 
     @property
     def elapsed(self):

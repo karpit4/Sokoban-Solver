@@ -1,6 +1,5 @@
 import tkinter as tk
 
-from gui.app import set_root
 from gui.screens.menu import MenuScreen
 from gui.screens.settings_screen import SettingsScreen
 from gui.styling import Styler
@@ -17,7 +16,6 @@ class App:
 
     def __init__(self, themes=None):
         self.root = tk.Tk()
-        set_root(self.root)            # окна, которые берут get_root(), откроются поверх этого
         self.root.title("Sokoban")
         self.root.minsize(MIN_WIDTH, MIN_HEIGHT)
         self.themes = themes or ThemeManager()
